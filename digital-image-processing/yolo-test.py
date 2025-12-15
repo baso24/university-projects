@@ -3,7 +3,7 @@ import time
 from ultralytics import YOLO
 
 def run_pose_estimation_filtered():
-    model = YOLO('yolo11n-pose.pt') 
+    model = YOLO('assets/yolo11n-pose.pt') 
     cap = cv2.VideoCapture(0)
     
     KEYPOINT_NAMES = {
@@ -17,7 +17,9 @@ def run_pose_estimation_filtered():
     print_interval = 0.2
     
     KEYPOINT_CONF_THRESHOLD = 0.8 # Soglia di confidenza per i punti chiave (80%)
-    PERSON_CONF_THRESHOLD = 0.8  # Soglia di confidenza per il rilevamento delle persone (70%)
+    PERSON_CONF_THRESHOLD = 0.7  # Soglia di confidenza per il rilevamento delle persone (70%)
+
+    prev_time = 0
 
     while True:
         success, frame = cap.read()  # legge un frame dalla webcam, success indica se la lettura è andata a buon fine, frame è l'immagine catturata
@@ -28,6 +30,17 @@ def run_pose_estimation_filtered():
         annotated_frame = results[0].plot() # disegna i risultati sul frame
 
         current_time = time.time()
+        
+        # Calcolo FPS
+        if prev_time > 0:
+            fps = 1 / (current_time - prev_time)
+        else:
+            fps = 0
+        prev_time = current_time
+        
+        # Aggiungo il testo dell'FPS in alto a sinistra
+        cv2.putText(annotated_frame, f"FPS: {int(fps)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
         
         if current_time - last_print_time > print_interval:
             print("-" * 30)
