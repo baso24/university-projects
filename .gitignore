@@ -2,6 +2,7 @@
 yolo11n-pose.pt
 
 assets/
+generated/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
