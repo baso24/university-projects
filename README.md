@@ -1,5 +1,5 @@
 <h1>Collection of University Projects</h1>
-<p><i>Artificial Intelligence and Automation Engineering (2025/2026)</i></p>
+<p><i>Master Degree in Artificial Intelligence and Automation Engineering (2025/2026) - Università di Siena</i></p>
 <br>
 
 <h3>Digital Image Processing</h3>
