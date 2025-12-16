@@ -7,10 +7,14 @@
 <p><b>Description: </b> </p>
 <br>
 <h3>Neural Networks</h3>
-<p><b>Title:</b></p>
-<p><b>Description: </b> </p>
+<p><b>Title: Conditional GAN on CelebA dataset with GUI</b></p>
+<p><b>Description: Training, evaluation and implementation of a conditional GAN on celebA dataset with a GUI to choose the face features to generate</b></p>
 <br>
-<h3>High Performance Computer Architetcture</h3>
+<h3>High Performance Computer Architecture</h3>
+<p><b>Title:</b></p>
+<p><b>Description: </b></p>
+<br>
+<h3>Fundamentals of Machine Learning</h3>
 <p><b>Title:</b></p>
 <p><b>Description: </b></p>
 
