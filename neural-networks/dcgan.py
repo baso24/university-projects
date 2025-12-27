@@ -58,7 +58,7 @@ class CelebADataset(Dataset):
                 img_name = row[0]
                 img_path = os.path.join(root_dir, img_name)
                 if first_row:
-                    print(f"DEBUG: Sto cercando il primo file qui: {os.path.abspath(img_path)}")
+                    print(f"Sto cercando il primo file qui: {os.path.abspath(img_path)}")
                     print(f"Esiste? {os.path.exists(img_path)}")
                     first_row = False
                 if os.path.exists(img_path):
@@ -350,6 +350,24 @@ if __name__ == '__main__':
     # Subset per velocizzare il training
     subset_size = min(SUBSET_DIM, len(train_dataset))
     train_dataset = torch.utils.data.Subset(train_dataset, torch.arange(subset_size))
+
+    print("Analisi distribuzione classi nel subset...")
+    stats = torch.zeros(n_classes)
+    total = len(train_dataset)
+
+    subset_indices = train_dataset.indices
+    count_pos = [0] * n_classes
+
+    # Accediamo direttamente alla lista data del dataset padre per velocità
+    for idx in subset_indices:
+        _, attrs = train_dataset.dataset.data[idx] 
+        for i in range(n_classes):
+            if attrs[i] > 0:
+                count_pos[i] += 1
+
+    print(f"Totale immagini subset: {total}")
+    for i, name in enumerate(attr_names):
+        print(f"{name}: {count_pos[i]} positivi ({count_pos[i]/total*100:.2f}%)")
 
     # Dataloader che divide il dataset in batch e mescola i dati ad ogni epoca.
     # 'num_workers' specifica il numero di subprocessi da usare per caricare le immagini dal disco alla RAM.
