@@ -21,6 +21,6 @@
 
 
 <h3>Fundamentals of Machine Learning</h3>
-<p><b>Title:</b>XOR network</p>
+<p><b>Title:</b> XOR network</p>
 <p><b>Description: </b>Implementation of a simple neural network to solve the XOR problem by visualizing the separation surfaces during the learning phase and evolution of the risk function</p>
 
