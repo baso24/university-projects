@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import copy
+from matplotlib.widgets import Slider
 
 # --- CONFIGURAZIONE ---
 #np.random.seed(42)  # Per riproducibilità
@@ -66,7 +68,7 @@ class XORNetwork:
         self.loss_history.append(loss)
 
 # --- VISUALIZZAZIONE ---
-def plot_results(net, epoch, ax_surface, ax_hidden):
+def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2):
     # Creazione Grid per la superficie di decisione
     xx, yy = np.meshgrid(np.linspace(-5, 5, 100), np.linspace(-5, 5, 100))
     grid = np.c_[xx.ravel(), yy.ravel()]
@@ -80,7 +82,9 @@ def plot_results(net, epoch, ax_surface, ax_hidden):
     # --- PLOT INPUT SPACE ---
     ax_surface.contourf(xx, yy, preds, levels=50, cmap="RdBu", alpha=0.6)
     ax_surface.scatter(X[:,0], X[:,1], c=y.ravel(), cmap="RdBu", edgecolors='black', s=100, linewidth=2)
-    ax_surface.set_title(f"Input Space (Epoch {epoch})")
+    ax_surface.set_title(f"Input Space (Epoch {epoch})", fontsize=10)
+    ax_surface.set_xlabel("Input x1", fontsize=9)
+    ax_surface.set_ylabel("Input x2", fontsize=9)
     ax_surface.set_xlim(-0.6, 1.6)
     ax_surface.set_ylim(-0.6, 1.6)
     
@@ -102,9 +106,9 @@ def plot_results(net, epoch, ax_surface, ax_hidden):
     hidden_points = np.array(hidden_points)
     
     ax_hidden.scatter(hidden_points[:,0], hidden_points[:,1], c=y.ravel(), cmap="RdBu", edgecolors='black', s=100, linewidth=2)
-    ax_hidden.set_title(f"Hidden Space (Epoch {epoch})")
-    ax_hidden.set_xlabel("Activation H1")
-    ax_hidden.set_ylabel("Activation H2")
+    ax_hidden.set_title(f"Hidden Space (Epoch {epoch})", fontsize=10)
+    ax_hidden.set_xlabel("Activation H1", fontsize=9)
+    ax_hidden.set_ylabel("Activation H2", fontsize=9)
     ax_hidden.set_xlim(-0.6, 1.6)
     ax_hidden.set_ylim(-0.6, 1.6)
 
@@ -120,39 +124,92 @@ def plot_results(net, epoch, ax_surface, ax_hidden):
         
     ax_hidden.legend(loc='lower right', fontsize='x-small')
 
+    # --- PLOT ACTIVATION MAPS ---
+    # Activation Neuron 1
+    act1 = a1_grid[:, 0].reshape(xx.shape)
+    ax_act1.contourf(xx, yy, act1, levels=50, cmap="Greys", vmin=0, vmax=1)
+    ax_act1.scatter(X[:,0], X[:,1], c=y.ravel(), cmap="RdBu", edgecolors='white', s=80, linewidth=1.5)
+    ax_act1.set_title(f"Activation H1 (Epoch {epoch})", fontsize=10)
+    ax_act1.set_xlabel("Input x1", fontsize=9)
+    ax_act1.set_ylabel("Input x2", fontsize=9)
+    ax_act1.set_xlim(-0.6, 1.6)
+    ax_act1.set_ylim(-0.6, 1.6)
+
+    # Activation Neuron 2
+    act2 = a1_grid[:, 1].reshape(xx.shape)
+    ax_act2.contourf(xx, yy, act2, levels=50, cmap="Greys", vmin=0, vmax=1)
+    ax_act2.scatter(X[:,0], X[:,1], c=y.ravel(), cmap="RdBu", edgecolors='white', s=80, linewidth=1.5)
+    ax_act2.set_title(f"Activation H2 (Epoch {epoch})", fontsize=10)
+    ax_act2.set_xlabel("Input x1", fontsize=9)
+    ax_act2.set_ylabel("Input x2", fontsize=9)
+    ax_act2.set_xlim(-0.6, 1.6)
+    ax_act2.set_ylim(-0.6, 1.6)
+
 if __name__ == "__main__":
     
     net = XORNetwork()
-    plt.figure(figsize=(10, 8))
-
-    rows = len(SNAPSHOTS)
-    cols = 2
-
-    plot_idx = 1
-    snapshot_counter = 0
+    
+    # Memorizziamo gli stati della rete per i vari snapshot
+    history = []
 
     for epoch in range(EPOCHS + 1):
-        # training step
         net.train(X, y)
-        
-        # Visualizzazione grafica agli step richiesti
         if epoch in SNAPSHOTS:
-            # Input Space Plot
-            ax1 = plt.subplot(rows, cols, plot_idx)
-            # Hidden Space Plot
-            ax2 = plt.subplot(rows, cols, plot_idx + 1)
-            
-            plot_results(net, epoch, ax1, ax2)
-            plot_idx += 2
+            history.append({
+                'epoch': epoch,
+                'W1': net.W1.copy(), 'b1': net.b1.copy(),
+                'W2': net.W2.copy(), 'b2': net.b2.copy(),
+                'loss': list(net.loss_history)
+            })
 
-    plt.tight_layout()
-    plt.show()
+    # --- SETUP DASHBOARD INTERATTIVA ---
+    fig = plt.figure(figsize=(16, 8))
+    
+    # Dashboard Header / Legend
+    plt.subplots_adjust(left=0.077, right=0.95, bottom=0.137, top=0.877, hspace=0.336, wspace=0.423)
+    fig.suptitle("XOR Network Training Dashboard", fontsize=14, fontweight='bold')
+    fig.text(0.5, 0.94, "Legend: Red Points = Class 0 (Target 0), Blue Points = Class 1 (Target 1) | Activation Maps: White=0 (Inactive), Black=1 (Active)", 
+             ha='center', fontsize=9, bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
 
-    # --- PLOT LOSS ---
-    plt.figure(figsize=(8, 5))
-    plt.plot(net.loss_history)
-    plt.title("Risk Function Evolution (Loss vs Epochs)")
-    plt.xlabel("Epochs")
-    plt.ylabel("MSE Loss")
-    plt.grid(True)
+    # Layout Griglia: 2 righe. Riga 1: 4 grafici. Riga 2: Loss.
+    gs = fig.add_gridspec(2, 4, height_ratios=[2, 1])
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[0, 2])
+    ax4 = fig.add_subplot(gs[0, 3])
+    ax_loss = fig.add_subplot(gs[1, :])
+
+    # Slider
+    ax_slider = plt.axes([0.25, 0.05, 0.5, 0.03])
+    slider = Slider(ax_slider, 'Epoch', 0, len(history)-1, valinit=0, valstep=1)
+
+    def update(val):
+        idx = int(slider.val)
+        state = history[idx]
+        slider.valtext.set_text(f"{state['epoch']}")
+        
+        # Ripristina pesi per la visualizzazione
+        net.W1, net.b1 = state['W1'], state['b1']
+        net.W2, net.b2 = state['W2'], state['b2']
+        
+        # Pulisci e ridisegna
+        ax1.clear(); ax2.clear(); ax3.clear(); ax4.clear(); ax_loss.clear()
+        plot_results(net, state['epoch'], ax1, ax2, ax3, ax4)
+        
+        # Plot Loss
+        full_loss = history[-1]['loss']
+        ax_loss.plot(full_loss, label='Training Loss')
+        # Marker corrente
+        curr_loss_val = full_loss[state['epoch']] if state['epoch'] < len(full_loss) else full_loss[-1]
+        ax_loss.scatter(state['epoch'], curr_loss_val, color='red', s=50, zorder=5, label='Current Epoch')
+        ax_loss.set_title("Risk Function Evolution", fontsize=10)
+        ax_loss.set_xlabel("Epochs", fontsize=9)
+        ax_loss.set_ylabel("MSE Loss", fontsize=9)
+        ax_loss.legend(fontsize=8)
+        ax_loss.grid(True)
+        
+        fig.canvas.draw_idle()
+
+    slider.on_changed(update)
+    update(0) # Init
     plt.show()
