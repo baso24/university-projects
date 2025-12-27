@@ -38,7 +38,7 @@ class CelebADataset(Dataset):
     def __init__(self, root_dir, csv_file, transform=None):
         self.root_dir = root_dir
         self.transform = transform
-        self.attr_names = ['Male', 'Young', 'Blond_Hair']
+        self.attr_names = ['Male', 'Young', 'Blond_Hair', 'Smiling']
         self.data = []
         
         print(f"Caricamento dataset da {csv_file}...")
@@ -212,6 +212,8 @@ def save_samples(index, latent_tensors, fixed_labels, generator, sample_dir, att
                 title_parts.append("Young" if is_true else "Old")
             elif name == 'Blond':
                 title_parts.append("Blond" if is_true else "Not Blond")
+            elif name == 'Smiling':
+                title_parts.append("Smiling" if is_true else "Not Smiling")
             elif is_true:
                 title_parts.append(name)
         
@@ -280,18 +282,18 @@ if __name__ == '__main__':
     IMG_DIR = os.path.join(current_dir, '../assets/archive/img_align_celeba/img_align_celeba/')
     ATTR_CSV = os.path.join(current_dir, '../assets/archive/list_attr_celeba.csv')
     
-    SUBSET_DIM = 25000 
+    SUBSET_DIM = 50000 
     LEARNING_RATE = 0.0002
     EPOCHS = 50
     
     latent_size = 128
     image_size = 64
     batch_size = 128
-    n_classes = 3 # Nel nostro caso sono Male (Female), Young (Old), Blond_Hair (Not Blond)
-    attr_names = ['Male', 'Young', 'Blond'] # Nomi per la visualizzazione
+    n_classes = 4 # Male, Young, Blond, Smiling
+    attr_names = ['Male', 'Young', 'Blond', 'Smiling'] # Nomi per la visualizzazione
     
-    # Scegliere quante immagini generare alla fine di ogni epoca
-    generated_samples_count = 8
+    # 16 immagini per coprire tutte le combinazioni (2^4)
+    generated_samples_count = 16
 
     train_dataset = CelebADataset(root_dir=IMG_DIR, csv_file=ATTR_CSV, transform=T.Compose([
         T.Resize(image_size),
@@ -326,11 +328,11 @@ if __name__ == '__main__':
     generated_images_dir = 'gan.generated'
     os.makedirs(generated_images_dir, exist_ok=True)
 
-    # Generiamo tutte le combinazioni possibili di attributi (2^3 = 8 combinazioni)
+    # Generiamo tutte le combinazioni possibili di attributi (2^4 = 16 combinazioni)
     labels_list = []
-    for i in range(8):
-        # Converte i in binario per ottenere le combinazioni (es. 0 -> -1,-1,-1; 7 -> 1,1,1)
-        l = [1 if (i >> (2-bit)) & 1 else -1 for bit in range(3)]
+    for i in range(16):
+        # Converte i in binario per ottenere le combinazioni
+        l = [1 if (i >> (3-bit)) & 1 else -1 for bit in range(4)]
         labels_list.append(l)
     fixed_labels = torch.tensor(labels_list, device=DEVICE).float()
 

@@ -1,93 +1,23 @@
 import os
 import torch
-import torch.nn as nn
-import matplotlib.pyplot as plt
 from torchvision.utils import make_grid
 import tkinter as tk
 from PIL import Image, ImageTk
 import numpy as np
 
-# Funzione per denormalizzare le immagini (da -1,1 a 0,1)
-def denorm(img_tensors):
-    return img_tensors * 0.5 + 0.5
-
-# Funzione per ottenere il device
-def get_device():
-    if torch.cuda.is_available():
-        return torch.device('cuda')
-    elif torch.backends.mps.is_available():
-        return torch.device('mps')
-    else:
-        return torch.device('cpu')
-
-# --- DCGAN Generator ---
-class DCGANGenerator(nn.Module):
-    def __init__(self, latent_size, n_classes=3):
-        super().__init__()
-        self.latent_size = latent_size
-        self.n_classes = n_classes
-        
-        self.network = nn.Sequential(
-            nn.ConvTranspose2d(latent_size + n_classes, 512, kernel_size=4, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(512),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(256),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.ReLU(True),
-
-            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.Tanh()
-        )
-
-    def forward(self, x, labels):
-        labels = labels.view(labels.size(0), self.n_classes, 1, 1)
-        x = torch.cat([x, labels], dim=1)
-        return self.network(x)
-
-# --- GAN Generator ---
-class GANGenerator(nn.Module):
-    def __init__(self, latent_size, n_classes=3):
-        super().__init__()
-        self.latent_size = latent_size
-        self.n_classes = n_classes
-        self.img_shape = (3, 64, 64)
-        self.img_flat_size = 3 * 64 * 64
-        
-        self.network = nn.Sequential(
-            nn.Linear(latent_size + n_classes, 256),
-            nn.ReLU(True),
-            nn.Linear(256, 512),
-            nn.ReLU(True),
-            nn.Linear(512, 1024),
-            nn.ReLU(True),
-            nn.Linear(1024, self.img_flat_size),
-            nn.Tanh()
-        )
-
-    def forward(self, x, labels):
-        x = x.view(x.size(0), -1)
-        x = torch.cat([x, labels], dim=1)
-        out = self.network(x)
-        return out.view(out.size(0), *self.img_shape)
+from gan import get_device, denorm, Generator as GANGenerator
+from dcgan import Generator as DCGANGenerator
 
 if __name__ == '__main__':
     DEVICE = get_device()
     latent_size = 128
-    n_classes = 3
+    n_classes = 4
     
     # --- CONFIGURAZIONE ---
     GENERATE_MALE = False  # True per generare un uomo, False per una donna
     GENERATE_YOUNG = True # True per giovane, False per anziano
     GENERATE_BLOND = True # True per biondo, False per non biondo
+    GENERATE_SMILING = True # True per sorridente, False per non sorridente
     
     current_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(current_dir, 'models')
@@ -124,6 +54,7 @@ if __name__ == '__main__':
     var_gender = tk.StringVar(value="Male" if GENERATE_MALE else "Female")
     var_age = tk.StringVar(value="Young" if GENERATE_YOUNG else "Old")
     var_hair = tk.StringVar(value="Blond" if GENERATE_BLOND else "Not Blond")
+    var_smiling = tk.StringVar(value="Smiling" if GENERATE_SMILING else "Not Smiling")
     var_model_type = tk.StringVar(value="DCGAN")
 
     # Layout principale: sinistra (controlli) e destra (immagine)
@@ -157,6 +88,7 @@ if __name__ == '__main__':
     tk.OptionMenu(frame_attrs, var_gender, "Male", "Female").pack(side=tk.LEFT, padx=5)
     tk.OptionMenu(frame_attrs, var_age, "Young", "Old").pack(side=tk.LEFT, padx=5)
     tk.OptionMenu(frame_attrs, var_hair, "Blond", "Not Blond").pack(side=tk.LEFT, padx=5)
+    tk.OptionMenu(frame_attrs, var_smiling, "Smiling", "Not Smiling").pack(side=tk.LEFT, padx=5)
 
     def generate_and_show():
         selected_model = var_model_type.get()
@@ -173,13 +105,15 @@ if __name__ == '__main__':
         val_male = 1.0 if var_gender.get() == "Male" else -1.0
         val_young = 1.0 if var_age.get() == "Young" else -1.0
         val_blond = 1.0 if var_hair.get() == "Blond" else -1.0
-        labels = torch.tensor([val_male, val_young, val_blond], device=DEVICE).float().unsqueeze(0).repeat(num_img, 1)
+        val_smiling = 1.0 if var_smiling.get() == "Smiling" else -1.0
+        labels = torch.tensor([val_male, val_young, val_blond, val_smiling], device=DEVICE).float().unsqueeze(0).repeat(num_img, 1)
         
         # Aggiorna titolo
         title_parts = []
         title_parts.append("Male" if val_male > 0 else "Female")
         title_parts.append("Young" if val_young > 0 else "Old")
         title_parts.append("Blond" if val_blond > 0 else "Not Blond")
+        title_parts.append("Smiling" if val_smiling > 0 else "Not Smiling")
         root.title("GAN: " + ", ".join(title_parts))
 
         noise = torch.randn(num_img, latent_size, 1, 1, device=DEVICE)
