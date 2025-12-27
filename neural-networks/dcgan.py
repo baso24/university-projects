@@ -331,8 +331,8 @@ if __name__ == '__main__':
     n_classes = 3 # Nel nostro caso sono Male (Female), Young (Old), Blond_Hair (Not Blond)
     attr_names = ['Male', 'Young', 'Blond'] # Nomi per la visualizzazione
     
-    # Scegliere quante immagini generare alla fine di ogni epoca
-    generated_samples_count = 16
+    # Si sceglie di generare un'immagine per ogni combinazione possibile di attributi
+    generated_samples_count = 8
 
     train_dataset = CelebADataset(root_dir=IMG_DIR, csv_file=ATTR_CSV, transform=T.Compose([
         T.Resize(image_size),
@@ -368,15 +368,11 @@ if __name__ == '__main__':
     os.makedirs(generated_images_dir, exist_ok=True)
 
     # Generiamo tutte le combinazioni possibili di attributi (2^3 = 8 combinazioni)
-    # E le ripetiamo per riempire le 16 immagini (2 volte ogni combinazione)
     labels_list = []
     for i in range(8):
         # Converte i in binario per ottenere le combinazioni (es. 0 -> -1,-1,-1; 7 -> 1,1,1)
         l = [1 if (i >> (2-bit)) & 1 else -1 for bit in range(3)]
         labels_list.append(l)
-    
-    # Ripetiamo la lista per arrivare a 16 (o taglia se generated_samples_count è diverso)
-    labels_list = (labels_list * (generated_samples_count // 8 + 1))[:generated_samples_count]
     fixed_labels = torch.tensor(labels_list, device=DEVICE).float()
 
     # TRAINING:
