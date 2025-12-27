@@ -1,8 +1,7 @@
-# modello yolo
-yolo11n-pose.pt
-
+#git ignore personalizzati
 assets/
-generated/
+gan.generated/
+dcgan.generated/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -20,42 +20,8 @@ def get_device():
     else:
         return torch.device('cpu')
 
-# Definizione del Discriminatore (identica a gan-test.py)
-class Discriminator(nn.Module):
-    def __init__(self, n_classes=3):
-        super().__init__()
-        self.n_classes = n_classes
-        
-        self.network = nn.Sequential(
-            nn.Conv2d(3 + n_classes, 64, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.Conv2d(512, 1, kernel_size=4, stride=1, padding=0, bias=False),
-            nn.Flatten(),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x, labels):
-        labels = labels.view(labels.size(0), self.n_classes, 1, 1)
-        labels = labels.repeat(1, 1, x.size(2), x.size(3))
-        x = torch.cat([x, labels], dim=1)
-        return self.network(x)
-
-# Definizione del Generatore (identica a gan-test.py)
-class Generator(nn.Module):
+# --- DCGAN Generator ---
+class DCGANGenerator(nn.Module):
     def __init__(self, latent_size, n_classes=3):
         super().__init__()
         self.latent_size = latent_size
@@ -87,6 +53,32 @@ class Generator(nn.Module):
         x = torch.cat([x, labels], dim=1)
         return self.network(x)
 
+# --- GAN Generator ---
+class GANGenerator(nn.Module):
+    def __init__(self, latent_size, n_classes=3):
+        super().__init__()
+        self.latent_size = latent_size
+        self.n_classes = n_classes
+        self.img_shape = (3, 64, 64)
+        self.img_flat_size = 3 * 64 * 64
+        
+        self.network = nn.Sequential(
+            nn.Linear(latent_size + n_classes, 256),
+            nn.ReLU(True),
+            nn.Linear(256, 512),
+            nn.ReLU(True),
+            nn.Linear(512, 1024),
+            nn.ReLU(True),
+            nn.Linear(1024, self.img_flat_size),
+            nn.Tanh()
+        )
+
+    def forward(self, x, labels):
+        x = x.view(x.size(0), -1)
+        x = torch.cat([x, labels], dim=1)
+        out = self.network(x)
+        return out.view(out.size(0), *self.img_shape)
+
 if __name__ == '__main__':
     DEVICE = get_device()
     latent_size = 128
@@ -94,23 +86,34 @@ if __name__ == '__main__':
     
     # --- CONFIGURAZIONE ---
     GENERATE_MALE = False  # True per generare un uomo, False per una donna
-    GENERATE_YOUNG = True # True per giovane, False per vecchio
+    GENERATE_YOUNG = True # True per giovane, False per anziano
     GENERATE_BLOND = True # True per biondo, False per non biondo
     
     current_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(current_dir, 'models')
     
-    # Inizializzazione modelli
-    generator = Generator(latent_size, n_classes).to(DEVICE)
-    discriminator = Discriminator(n_classes).to(DEVICE)
+    # Pre-load models
+    loaded_models = {}
     
-    # Caricamento pesi
-    print(f"Caricamento modelli da {models_dir}...")
-    generator.load_state_dict(torch.load(os.path.join(models_dir, 'generator.pth'), map_location=DEVICE))
-    discriminator.load_state_dict(torch.load(os.path.join(models_dir, 'discriminator.pth'), map_location=DEVICE))
-    
-    generator.eval()
-    discriminator.eval()
+    print("Loading DCGAN model...")
+    dcgan_path = os.path.join(models_dir, 'dcgan.generator.pth')
+    if os.path.exists(dcgan_path):
+        dcgan_gen = DCGANGenerator(latent_size, n_classes).to(DEVICE)
+        dcgan_gen.load_state_dict(torch.load(dcgan_path, map_location=DEVICE))
+        dcgan_gen.eval()
+        loaded_models['DCGAN'] = dcgan_gen
+    else:
+        print(f"Warning: {dcgan_path} not found")
+        
+    print("Loading GAN model...")
+    gan_path = os.path.join(models_dir, 'gan.generator.pth')
+    if os.path.exists(gan_path):
+        gan_gen = GANGenerator(latent_size, n_classes).to(DEVICE)
+        gan_gen.load_state_dict(torch.load(gan_path, map_location=DEVICE))
+        gan_gen.eval()
+        loaded_models['GAN'] = gan_gen
+    else:
+        print(f"Warning: {gan_path} not found")
     
     # --- GUI TKINTER ---
     root = tk.Tk()
@@ -118,9 +121,10 @@ if __name__ == '__main__':
 
     # Variabili
     var_num_images = tk.IntVar(value=16)
-    var_gender = tk.StringVar(value="Uomo" if GENERATE_MALE else "Donna")
-    var_age = tk.StringVar(value="Giovane" if GENERATE_YOUNG else "Vecchio")
-    var_hair = tk.StringVar(value="Biondi" if GENERATE_BLOND else "Non Biondi")
+    var_gender = tk.StringVar(value="Male" if GENERATE_MALE else "Female")
+    var_age = tk.StringVar(value="Young" if GENERATE_YOUNG else "Old")
+    var_hair = tk.StringVar(value="Blond" if GENERATE_BLOND else "Not Blond")
+    var_model_type = tk.StringVar(value="DCGAN")
 
     # Layout principale: sinistra (controlli) e destra (immagine)
     frame_left = tk.Frame(root)
@@ -133,28 +137,42 @@ if __name__ == '__main__':
     frame_controls = tk.Frame(frame_left)
     frame_controls.pack(pady=5)
 
+    # Selezione Modello
+    frame_model = tk.LabelFrame(frame_controls, text="Model")
+    frame_model.pack(fill="x", pady=5)
+    tk.Radiobutton(frame_model, text="DCGAN", variable=var_model_type, value="DCGAN").pack(side=tk.LEFT, padx=10)
+    tk.Radiobutton(frame_model, text="GAN", variable=var_model_type, value="GAN").pack(side=tk.LEFT, padx=10)
+
     # Selezione numero immagini
-    frame_num = tk.LabelFrame(frame_controls, text="Numero Immagini")
+    frame_num = tk.LabelFrame(frame_controls, text="Number of Images")
     frame_num.pack(fill="x", pady=5)
     tk.Radiobutton(frame_num, text="1", variable=var_num_images, value=1).pack(side=tk.LEFT, padx=10)
     tk.Radiobutton(frame_num, text="4", variable=var_num_images, value=4).pack(side=tk.LEFT, padx=10)
     tk.Radiobutton(frame_num, text="16", variable=var_num_images, value=16).pack(side=tk.LEFT, padx=10)
 
     # Selezione attributi (Select/OptionMenu)
-    frame_attrs = tk.LabelFrame(frame_controls, text="Attributi")
+    frame_attrs = tk.LabelFrame(frame_controls, text="Attributes")
     frame_attrs.pack(fill="x", pady=5)
     
-    tk.OptionMenu(frame_attrs, var_gender, "Uomo", "Donna").pack(side=tk.LEFT, padx=5)
-    tk.OptionMenu(frame_attrs, var_age, "Giovane", "Vecchio").pack(side=tk.LEFT, padx=5)
-    tk.OptionMenu(frame_attrs, var_hair, "Biondi", "Non Biondi").pack(side=tk.LEFT, padx=5)
+    tk.OptionMenu(frame_attrs, var_gender, "Male", "Female").pack(side=tk.LEFT, padx=5)
+    tk.OptionMenu(frame_attrs, var_age, "Young", "Old").pack(side=tk.LEFT, padx=5)
+    tk.OptionMenu(frame_attrs, var_hair, "Blond", "Not Blond").pack(side=tk.LEFT, padx=5)
 
     def generate_and_show():
+        selected_model = var_model_type.get()
+        
+        if selected_model not in loaded_models:
+            print(f"Error: Model {selected_model} not loaded.")
+            return
+            
+        generator = loaded_models[selected_model]
+
         num_img = var_num_images.get()
         
         # Costruzione labels in base ai menu a tendina
-        val_male = 1.0 if var_gender.get() == "Uomo" else -1.0
-        val_young = 1.0 if var_age.get() == "Giovane" else -1.0
-        val_blond = 1.0 if var_hair.get() == "Biondi" else -1.0
+        val_male = 1.0 if var_gender.get() == "Male" else -1.0
+        val_young = 1.0 if var_age.get() == "Young" else -1.0
+        val_blond = 1.0 if var_hair.get() == "Blond" else -1.0
         labels = torch.tensor([val_male, val_young, val_blond], device=DEVICE).float().unsqueeze(0).repeat(num_img, 1)
         
         # Aggiorna titolo
@@ -178,7 +196,7 @@ if __name__ == '__main__':
         lbl_img.imgtk = imgtk
         lbl_img.configure(image=imgtk)
 
-    btn_regen = tk.Button(frame_left, text="Rigenera", command=generate_and_show, font=("Arial", 14))
+    btn_regen = tk.Button(frame_left, text="Regenerate", command=generate_and_show, font=("Arial", 14))
     btn_regen.pack(pady=10)
 
     lbl_img = tk.Label(frame_right)
