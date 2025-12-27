@@ -356,6 +356,7 @@ if __name__ == '__main__':
     plt.xlabel("EPOCHS")
     plt.ylabel("Loss")
     plt.legend()
+    plt.savefig(os.path.join(generated_images_dir, 'losses.png'))
     plt.show()
     
     # Plot real and fake scores
@@ -366,6 +367,7 @@ if __name__ == '__main__':
     plt.xlabel("EPOCHS")
     plt.ylabel("Score")
     plt.legend()
+    plt.savefig(os.path.join(generated_images_dir, 'scores.png'))
     plt.show()
     
     # Generate final samples
