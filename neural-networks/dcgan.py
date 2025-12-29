@@ -22,12 +22,14 @@ def get_device():
         return torch.device('mps')
     else:
         return torch.device('cpu')
-
+    
+# Mostra un batch di immagini generate dal generatore in una griglia 4x4
 def show_images(images, nmax=16):
   fig, ax = plt.subplots(figsize=(8,8))
   ax.set_xticks([]); ax.set_yticks([])
   ax.imshow(make_grid(denorm(images.detach()[:nmax]), nrow=4).permute(1, 2, 0))
 
+# Mostra un batch di immagini dal dataloader
 def show_batch(dl, nmax=16):
   for images, _ in dl:
     show_images(images, nmax)
@@ -35,33 +37,32 @@ def show_batch(dl, nmax=16):
 
 # Dataset personalizzato per leggere immagini e attributi dal CSV
 class CelebADataset(Dataset):
+    # root_dir: directory delle immagini
+    # csv_file: file CSV con nomi immagini e attributi
+    # transform: trasformazioni da applicare alle immagini
     def __init__(self, root_dir, csv_file, transform=None):
         self.root_dir = root_dir
         self.transform = transform
         self.attr_names = ['Male', 'Young', 'Blond_Hair', 'Smiling']
         self.data = []
         
+        # apro il file csv degli attributi
         print(f"Caricamento dataset da {csv_file}...")
         with open(csv_file, 'r') as f:
             reader = csv.reader(f)
             header = next(reader)
             
-            # Trova gli indici delle colonne
+            # trovo gli indici delle colonne degli attributi desiderati nel file csv
             try:
                 attr_indices = [header.index(name) for name in self.attr_names]
             except ValueError:
                 print(f"Errore: Colonne {self.attr_names} non trovate nell'header.")
                 raise
 
-            first_row = True
-            for row in reader:
+            for row in reader: # ogni row è fatta così: [img_name, attr1, attr2, ..., attr40]
                 img_name = row[0]
-                img_path = os.path.join(root_dir, img_name)
-                if first_row:
-                    print(f"Sto cercando il primo file qui: {os.path.abspath(img_path)}")
-                    print(f"Esiste? {os.path.exists(img_path)}")
-                    first_row = False
-                if os.path.exists(img_path):
+                img_path = os.path.join(root_dir, img_name) # costruisco il path dell'immagine
+                if os.path.exists(img_path): # controllo che l'immagine esista nel dataset
                     attributes = [float(row[i]) for i in attr_indices]
                     self.data.append((img_name, attributes))
                     
@@ -70,16 +71,17 @@ class CelebADataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+    # metodo che definisce cosa succede quando si richiede un elemento del dataset
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
             
-        img_name, attributes = self.data[idx]
+        img_name, attributes = self.data[idx] # recupero nome immagine e attributi, da self.data che è: ['000001.jpg', [1.0, -1.0, 1.0, -1.0]]
         img_path = os.path.join(self.root_dir, img_name)
         image = Image.open(img_path)
         
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image) # applico le trasformazioni definite, l'immagine passa da PIL a Tensor
             
         return image, torch.tensor(attributes, dtype=torch.float32)
 
@@ -88,7 +90,7 @@ class Discriminator(nn.Module):
         super().__init__()
         self.n_classes = n_classes
         
-        # L'input ora ha 3 canali (RGB) + n_classes canali (uno per ogni attributo)
+        # L'input ha 3 (RGB) + n_classes canali (n_classes è il numero di attributi)
         self.network = nn.Sequential(
             # in: (3 + n_classes) x 64 x 64
             nn.Conv2d(3 + n_classes, 64, kernel_size=4, stride=2, padding=1, bias=False),
@@ -119,44 +121,49 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, x, labels):
-        # x: [batch, 3, 64, 64]
-        # labels: [batch, n_classes]
+        # x: [batch_size, 3, 64, 64]
+        # labels: [batch_size, n_classes]
         
-        # Espandiamo le label per farle diventare grandi come l'immagine (64x64)
-        # Creiamo dei "canali di etichette" da concatenare all'immagine
+        # Le etichette devono diventare un cubo di dimensione 4x1x1 da concatenare all'immagine
+        # Questo cubo viene poi espanso a essere 4x64x64
+        # Ogni pixel dell'immagine avrà queste label associate oltre ai suoi 3 canali RGB
         labels = labels.view(labels.size(0), self.n_classes, 1, 1)
-        labels = labels.repeat(1, 1, x.size(2), x.size(3))
+        labels = labels.expand(-1, -1, x.size(2), x.size(3))
         
-        # Concateniamo immagine e label lungo la dimensione dei canali
+        # Concateniamo i 3 canali RGB con i canali delle label
         x = torch.cat([x, labels], dim=1)
         return self.network(x)
 
     def train_step(self, real_images, labels, generator, optimizer):
-        # Clear discriminator gradients
+        # Elimino i gradienti calcolati nel passo precedente per evitare accomulazioni
         optimizer.zero_grad()
         
         device = real_images.device
         batch_size = real_images.size(0)
 
-        # Pass real images through discriminator
-        # Passiamo anche le label reali
+        # Passo le immagini e le etichette reali al disciriminatore (chiamo forward)
         real_preds = self(real_images, labels)
+        # Vettore di 1 (il discriminatore deve riconoscere che queste sono immagini vere)
         real_targets = torch.ones(real_images.size(0), 1, device=device)
+        # Calcolo la loss per le immagini reali
         real_loss = F.binary_cross_entropy(real_preds, real_targets)
+        # Metrica di monitoraggio, più lo score si avvicina a 1 più significa che è bravo a riconoscere immagini reali
         real_score = torch.mean(real_preds).item()
 
-        # Generate fake images
+        # Genero immagini false con il generatore a partire da rumore casuale e le etichette uguali a quelle passate prima per le immagini reali
         latent = torch.randn(batch_size, generator.latent_size, 1, 1, device=device)
         fake_images = generator(latent, labels)
 
-        # Pass Fake images through discriminator
-        fake_targets = torch.zeros(fake_images.size(0), 1, device=device)
-        # Al discriminatore passiamo l'immagine falsa MA con le label "richieste"
+        # Passo le immagini false e le etichette al discriminatore
         fake_preds = self(fake_images, labels)
+        # Vettore di 0 (il discriminatore deve riconoscere che queste sono immagini false)
+        fake_targets = torch.zeros(fake_images.size(0), 1, device=device)
+        # Calcolo la loss per le immagini false
         fake_loss = F.binary_cross_entropy(fake_preds, fake_targets)
+        # Metrica di monitoraggio, più lo score si avvicina a 0 più significa che è bravo a riconoscere immagini false
         fake_score = torch.mean(fake_preds).item()
 
-        # Update discriminator weights
+        # La perdita totale è la somma delle due perdite
         loss = real_loss + fake_loss
         loss.backward()
         optimizer.step()
@@ -169,7 +176,7 @@ class Generator(nn.Module):
         self.n_classes = n_classes
         
         self.network = nn.Sequential(
-            # in: (latent_size + n_classes) x 1 x 1
+            # input: (latent_size + n_classes) x 1 x 1
             nn.ConvTranspose2d(latent_size + n_classes, 512, kernel_size=4, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(512),
             nn.ReLU(True),
@@ -196,57 +203,64 @@ class Generator(nn.Module):
         )
 
     def forward(self, x, labels):
-        # x: [batch, latent_size, 1, 1]
-        # labels: [batch, n_classes]
+        # x: [batch_size, latent_size, 1, 1]
+        # labels: [batch_size, n_classes]
         
-        # Concateniamo il vettore latente con il vettore delle label
+        # Estendo le label a 4x1x1 per poterle concatenare al vettore di rumore
         labels = labels.view(labels.size(0), self.n_classes, 1, 1)
+        # Concateno il rumore con le label
         x = torch.cat([x, labels], dim=1)
         return self.network(x)
 
     def train_step(self, discriminator, labels, optimizer, batch_size, device):
-        # Clear generator gradients
+        # Elimino i gradienti calcolati nel passo precedente per evitare accomulazioni
         optimizer.zero_grad()
 
-        # Generate fake images
+        # Genero rumore casuale
         latent = torch.randn(batch_size, self.latent_size, 1, 1, device=device)
         # Il generatore prova a creare un'immagine che soddisfi le label fornite
         fake_images = self(latent, labels)
 
-        # Try to fool the discriminator
-        # Il discriminatore valuta se l'immagine generata sembra reale E coerente con le label
+        # Il discriminatore valuta se l'immagine generata sembra reale e coerente con le label
         preds = discriminator(fake_images, labels)
+        # Vettore di 1 (il generatore vuole che il discriminatore pensi che queste immagini siano reali)
         targets = torch.ones(batch_size, 1, device=device)
+        # Calcolo la loss
         loss = F.binary_cross_entropy(preds, targets)
 
-        # Update generator 
         loss.backward()
         optimizer.step()
 
         return loss.item()
 
-def save_samples(index, latent_tensors, fixed_labels, generator, sample_dir, attr_names, show=True):
-    fake_images = generator(latent_tensors, fixed_labels)
+def save_samples(index, latent_tensor, labels, generator, sample_dir, attr_names, show=True):
+    # Faccio generare le immagini al generatore
+    fake_images = generator(latent_tensor, labels)
     fake_fname = 'generated-images-{0:0=4d}.png'.format(index)
     
     images = denorm(fake_images).cpu().detach()
+    
     n_images = images.size(0)
     nrow = int(math.sqrt(n_images))
     ncol = math.ceil(n_images / nrow)
     
     # Crea una figura con subplots per mostrare titoli individuali
-    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol*2.5, nrow*3))
-    axes = axes.flatten()
+    fig, axes = plt.subplots(nrow, ncol, figsize=(ncol*3, nrow*3))
+    # trasformo la matrice di assi in un array 1D
+    axes = axes.flatten() 
     
     for i in range(n_images):
         ax = axes[i]
+        # PyTorch memorizza le immagini come [Canali, Altezza, Larghezza]
+        # Matplotlib le vuole come [Altezza, Larghezza, Canali]
         ax.imshow(images[i].permute(1, 2, 0))
+        # Rimuovo gli assi dalla visualizzazione
         ax.set_xticks([]); ax.set_yticks([])
         
         # Crea il titolo basato sulle label
         title_parts = []
         for j, name in enumerate(attr_names):
-            is_true = fixed_labels[i][j] > 0
+            is_true = labels[i][j] > 0
             if name == 'Male':
                 title_parts.append("Male" if is_true else "Female")
             elif name == 'Young':
@@ -270,87 +284,85 @@ def save_samples(index, latent_tensors, fixed_labels, generator, sample_dir, att
     else:
         plt.close()
 
-def train_gan(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, input_noise, fixed_labels, sample_dir, attr_names, start_idx=1):
+def train_dcgan(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, input_noise, fixed_labels, sample_dir, attr_names, start_idx=1):
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     
-    # Losses & scores
     losses_g = []
     losses_d = []
     real_scores = []
     fake_scores = []
+    optimizer_d = torch.optim.Adam(discriminator.parameters(), LEARNING_RATE, betas=(0.5, 0.999))
+    optimizer_g = torch.optim.Adam(generator.parameters(), LEARNING_RATE, betas=(0.5, 0.999))
     
-    # Create optimizers
-    opt_d = torch.optim.Adam(discriminator.parameters(), LEARNING_RATE, betas=(0.5, 0.999))
-    opt_g = torch.optim.Adam(generator.parameters(), LEARNING_RATE, betas=(0.5, 0.999))
-    
-    print("Inizio del training...")
+    print("----- Inizio del training -----")
     
     for epoch in range(EPOCHS):
-        # Uso tqdm sul dataloader per vedere il progresso batch per batch
+        # Uso tqdm per vedere il progresso batch per batch
+        # Mi serve per capire il tempo che ci metterà per ogni epoca...
         pbar = tqdm(train_dl, desc=f"Epoch [{epoch+1}/{EPOCHS}]")
         for i, (real_images, labels) in enumerate(pbar):
             real_images = real_images.to(device)
             labels = labels.to(device)
             
-            # Train discriminator
-            loss_d, real_score, fake_score = discriminator.train_step(real_images, labels, generator, opt_d)
-            
             # Train generator
-            loss_g = generator.train_step(discriminator, labels, opt_g, real_images.size(0), device)
+            loss_g = generator.train_step(discriminator, labels, optimizer_g, real_images.size(0), device)
             
-            # Aggiorno la barra di tqdm con le loss correnti
+            # Train discriminator
+            loss_d, real_score, fake_score = discriminator.train_step(real_images, labels, generator, optimizer_d)
+
+            # Aggiorno la barra di tqdm con le loss rispettive
             pbar.set_postfix({'loss_d': f'{loss_d:.4f}', 'loss_g': f'{loss_g:.4f}'})
 
-        # Record losses & scores
         losses_g.append(loss_g)
         losses_d.append(loss_d)
         real_scores.append(real_score)
         fake_scores.append(fake_score)
-
-        # Log losses & scores (last batch)
         print("Epoch [{}/{}], loss_g: {:.4f}, loss_d: {:.4f}, real_score: {:.4f}, fake_score: {:.4f}".format(epoch+1, EPOCHS, loss_g, loss_d, real_score, fake_score))
-        # Save generated images
+        
+        #Salvo le immagini generate in questa epoca
         save_samples(epoch+start_idx, input_noise, fixed_labels, generator, sample_dir, attr_names, show=False)
     
     return losses_g, losses_d, real_scores, fake_scores
 
 if __name__ == '__main__':
     
-    DEVICE = get_device()
-    
     current_dir = os.path.dirname(os.path.abspath(__file__))
     IMG_DIR = os.path.join(current_dir, '../assets/archive/img_align_celeba/img_align_celeba/')
     ATTR_CSV = os.path.join(current_dir, '../assets/archive/list_attr_celeba.csv')
     
-    SUBSET_DIM = 50000 
+    DEVICE = get_device()
+    SUBSET_DIM = 75000 
     LEARNING_RATE = 0.0002
-    EPOCHS = 20
+    EPOCHS = 30
     
     latent_size = 128
     image_size = 64
     batch_size = 128
-    n_classes = 4 # Male, Young, Blond, Smiling
-    attr_names = ['Male', 'Young', 'Blond', 'Smiling'] # Nomi per la visualizzazione
+    n_classes = 4
+    attr_names = ['Male', 'Young', 'Blond', 'Smiling'] # Nomi label
     
-    # Si sceglie di generare un'immagine per ogni combinazione possibile di attributi (2^4 = 16)
+    # Generariamo un'immagine per ogni combinazione possibile di attributi (2^4 = 16)
     generated_samples_count = 16
 
-    train_dataset = CelebADataset(root_dir=IMG_DIR, csv_file=ATTR_CSV, transform=T.Compose([
-        T.Resize(image_size),
+    # Definizione delle trasformazioni da applicare alle immagini e caricamento del dataset
+    transform = T.Compose([T.Resize(image_size),
         T.CenterCrop(image_size),
         T.ToTensor(),
-        T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ]))
+        T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+    full_dataset = CelebADataset(root_dir=IMG_DIR, csv_file=ATTR_CSV, transform=transform)
 
-    if len(train_dataset) == 0:
+    # Test purposes
+    if len(full_dataset) == 0:
         print("ERRORE: Nessuna immagine trovata. Verifica che il percorso IMG_DIR sia corretto.")
         exit()
 
-    # Subset per velocizzare il training
-    subset_size = min(SUBSET_DIM, len(train_dataset))
-    train_dataset = torch.utils.data.Subset(train_dataset, torch.arange(subset_size))
+    # Creazione subset del dataset
+    subset_size = min(SUBSET_DIM, len(full_dataset))
+    indices = torch.randperm(len(full_dataset))[:subset_size]
+    train_dataset = torch.utils.data.Subset(full_dataset, indices)
 
+    # Vediamo la distribuzione delle classi nel subset creato
     print("Analisi distribuzione classi nel subset...")
     stats = torch.zeros(n_classes)
     total = len(train_dataset)
@@ -373,10 +385,8 @@ if __name__ == '__main__':
     # 'num_workers' specifica il numero di subprocessi da usare per caricare le immagini dal disco alla RAM.
     train_dl = DataLoader(train_dataset, batch_size, shuffle=True, num_workers=2, pin_memory=(DEVICE.type == 'cuda'))
     
-    #just for testing purposes...
+    # Test purposes
     print(f"Immagini caricate: {len(train_dataset)}")
-    #show_batch(train_dl)
-    #plt.show()
     
     discriminator = Discriminator(n_classes=n_classes).to(DEVICE)
     generator = Generator(latent_size, n_classes=n_classes).to(DEVICE)
@@ -386,18 +396,22 @@ if __name__ == '__main__':
     # Directory per salvare le immagini generate durante il training
     generated_images_dir = 'dcgan.generated'
     os.makedirs(generated_images_dir, exist_ok=True)
+    
+    # Directory permanente basata sui parametri di training
+    permanent_dir = f'dcgan.{SUBSET_DIM}subset.{EPOCHS}.epochs'
+    os.makedirs(permanent_dir, exist_ok=True)
 
     # Generiamo tutte le combinazioni possibili di attributi (2^4 = 16 combinazioni)
     labels_list = []
     for i in range(16):
-        # Converte i in binario per ottenere le combinazioni
+        # Logica bitwise per creare combinazioni di -1 e 1
         l = [1 if (i >> (3-bit)) & 1 else -1 for bit in range(4)]
         labels_list.append(l)
-    fixed_labels = torch.tensor(labels_list, device=DEVICE).float()
+    labels = torch.tensor(labels_list, device=DEVICE).float()
 
     # TRAINING:
     # Mi restituisce loss del generatore e del discriminatore per ogni epoca, insieme agli scores dei reali e falsi
-    losses_g, losses_d, real_scores, fake_scores = train_gan(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, fixed_labels, generated_images_dir, attr_names)
+    losses_g, losses_d, real_scores, fake_scores = train_dcgan(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, labels, generated_images_dir, attr_names)
     
     models_dir = os.path.join(current_dir, 'models')
     os.makedirs(models_dir, exist_ok=True)
@@ -414,6 +428,7 @@ if __name__ == '__main__':
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig(os.path.join(generated_images_dir, 'losses.png'))
+    plt.savefig(os.path.join(permanent_dir, 'losses.png'))
     plt.show()
     
     # Plot real and fake scores
@@ -425,7 +440,9 @@ if __name__ == '__main__':
     plt.ylabel("Score")
     plt.legend()
     plt.savefig(os.path.join(generated_images_dir, 'scores.png'))
+    plt.savefig(os.path.join(permanent_dir, 'scores.png'))
     plt.show()
     
-    # Generate final samples
-    save_samples(EPOCHS+1, input_noise, fixed_labels, generator, generated_images_dir, attr_names)
+    # Salvataggio delle immagini generate finali
+    save_samples(EPOCHS+1, input_noise, labels, generator, generated_images_dir, attr_names, show=False)
+    save_samples(EPOCHS+1, input_noise, labels, generator, permanent_dir, attr_names, show=True)
