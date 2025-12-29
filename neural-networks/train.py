@@ -446,14 +446,14 @@ if __name__ == '__main__':
     
     DEVICE = get_device()
     SUBSET_DIM = 75000 
-    LEARNING_RATE = 0.0002
     EPOCHS = 30
+    LEARNING_RATE = 0.0002
     
     latent_size = 128
     image_size = 64
     batch_size = 128
     n_classes = 4
-    attr_names = ['Male', 'Young', 'Blond', 'Smiling'] # Nomi label
+    attr_names = ['Male', 'Young', 'Blond', 'Smiling']
     
     # Generariamo un'immagine per ogni combinazione possibile di attributi (2^4 = 16)
     generated_samples_count = 16
@@ -479,17 +479,13 @@ if __name__ == '__main__':
     print("Analisi distribuzione classi nel subset...")
     stats = torch.zeros(n_classes)
     total = len(train_dataset)
-
     subset_indices = train_dataset.indices
     count_pos = [0] * n_classes
-
-    # Accediamo direttamente alla lista data del dataset padre per velocità
     for idx in subset_indices:
         _, attrs = train_dataset.dataset.data[idx] 
         for i in range(n_classes):
             if attrs[i] > 0:
                 count_pos[i] += 1
-
     print(f"Totale immagini subset: {total}")
     for i, name in enumerate(attr_names):
         print(f"{name}: {count_pos[i]} positivi ({count_pos[i]/total*100:.2f}%)")
