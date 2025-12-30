@@ -97,7 +97,6 @@ class DCGANDiscriminator(nn.Module):
         self.network = nn.Sequential(
             # in: (3 + n_classes) x 64 x 64
             nn.Conv2d(3 + n_classes, 64, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2, inplace=True),
             # out: 64 x 32 x 32
 
@@ -119,7 +118,6 @@ class DCGANDiscriminator(nn.Module):
             nn.Conv2d(512, 1, kernel_size=4, stride=1, padding=0, bias=False),
             # out: 1 x 1 x 1
 
-            nn.Flatten(),
             nn.Sigmoid()
         )
 
