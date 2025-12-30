@@ -566,26 +566,24 @@ if __name__ == '__main__':
     # Plot losses
     plt.figure(figsize=(10,5))
     plt.title("Generator and Discriminator Loss During Training")
-    plt.plot(losses_g, label="G")
-    plt.plot(losses_d, label="D")
-    plt.xlabel("EPOCHS")
+    plt.plot(losses_g, label="Generator")
+    plt.plot(losses_d, label="Discriminator")
+    plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig(os.path.join(generated_images_dir, 'losses.png'))
     plt.savefig(os.path.join(permanent_dir, 'losses.png'))
-    plt.show()
     
     # Plot real and fake scores
     plt.figure(figsize=(10,5))
-    plt.title("Real and Fake Scores During Training")
+    plt.title("Real and Fake Scores of Discriminator During Training")
     plt.plot(real_scores, label="Real")
     plt.plot(fake_scores, label="Fake")
-    plt.xlabel("EPOCHS")
+    plt.xlabel("Epochs")
     plt.ylabel("Score")
     plt.legend()
     plt.savefig(os.path.join(generated_images_dir, 'scores.png'))
     plt.savefig(os.path.join(permanent_dir, 'scores.png'))
-    plt.show()
     
     # Salvataggio delle immagini generate finali
     save_samples(EPOCHS+1, input_noise, labels, generator, generated_images_dir, attr_names, show=False)
