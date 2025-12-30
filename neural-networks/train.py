@@ -446,7 +446,7 @@ if __name__ == '__main__':
     
     DEVICE = get_device()
     SUBSET_DIM = 100000 
-    EPOCHS = 50
+    EPOCHS = 100
     LEARNING_RATE = 0.0002
     
     latent_size = 128
@@ -511,7 +511,7 @@ if __name__ == '__main__':
     os.makedirs(generated_images_dir, exist_ok=True)
     
     # Directory permanente basata sui parametri di training
-    permanent_dir = f'{model_prefix}.{SUBSET_DIM}subset.{EPOCHS}.epochs'
+    permanent_dir = f'{model_prefix}.{SUBSET_DIM}subset.{EPOCHS}epochs{LEARNING_RATE}lr'
     os.makedirs(permanent_dir, exist_ok=True)
 
     # Generiamo tutte le combinazioni possibili di attributi (2^4 = 16 combinazioni)
