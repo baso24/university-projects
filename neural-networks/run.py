@@ -5,8 +5,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import numpy as np
 
-from gan import get_device, denorm, Generator as GANGenerator
-from dcgan import Generator as DCGANGenerator
+from train import DCGANGenerator, GANGenerator, get_device, denorm
 
 def generate_and_show():
     # Prendo il modello selezionato

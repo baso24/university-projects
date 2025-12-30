@@ -445,8 +445,8 @@ if __name__ == '__main__':
     ATTR_CSV = os.path.join(current_dir, '../assets/archive/list_attr_celeba.csv')
     
     DEVICE = get_device()
-    SUBSET_DIM = 75000 
-    EPOCHS = 30
+    SUBSET_DIM = 100000 
+    EPOCHS = 50
     LEARNING_RATE = 0.0002
     
     latent_size = 128
