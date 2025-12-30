@@ -1,7 +1,9 @@
 import os
 import torch
 from torchvision.utils import make_grid
+from tkinter import ttk
 import tkinter as tk
+from ttkthemes import ThemedTk
 from PIL import Image, ImageTk
 import numpy as np
 
@@ -102,8 +104,12 @@ if __name__ == '__main__':
         print(f"Warning: {gan_path} not found")
     
     # Inizio GUI Tkinter
-    root = tk.Tk()
+    root = ThemedTk(theme="arc")
     root.title("GAN and DCGAN: Human faces generator")
+
+    # Configurazione stile per il bottone (ttk richiede uno Style per cambiare font)
+    style = ttk.Style()
+    style.configure("Big.TButton", font=("Arial", 14))
 
     # Variabili
     var_num_images = tk.IntVar(value=16)
@@ -114,43 +120,42 @@ if __name__ == '__main__':
     var_model_type = tk.StringVar(value="DCGAN")
 
     # A sinistra i controlli 
-    frame_left = tk.Frame(root)
+    frame_left = ttk.Frame(root)
     frame_left.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
 
     # A destra l'immagine generata
-    frame_right = tk.Frame(root)
+    frame_right = ttk.Frame(root)
     frame_right.pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
-
     # Frame per i controlli
-    frame_controls = tk.Frame(frame_left)
+    frame_controls = ttk.Frame(frame_left)
     frame_controls.pack(pady=5)
 
     # Selezione Modello
-    frame_model = tk.LabelFrame(frame_controls, text="Model")
+    frame_model = ttk.LabelFrame(frame_controls, text="Model")
     frame_model.pack(fill="x", pady=5)
-    tk.Radiobutton(frame_model, text="DCGAN", variable=var_model_type, value="DCGAN").pack(side=tk.LEFT, padx=10)
-    tk.Radiobutton(frame_model, text="GAN", variable=var_model_type, value="GAN").pack(side=tk.LEFT, padx=10)
+    ttk.Radiobutton(frame_model, text="DCGAN", variable=var_model_type, value="DCGAN").pack(side=tk.LEFT, padx=10)
+    ttk.Radiobutton(frame_model, text="GAN", variable=var_model_type, value="GAN").pack(side=tk.LEFT, padx=10)
 
     # Selezione numero immagini
-    frame_num = tk.LabelFrame(frame_controls, text="Number of Images")
+    frame_num = ttk.LabelFrame(frame_controls, text="Number of Images")
     frame_num.pack(fill="x", pady=5)
-    tk.Radiobutton(frame_num, text="1", variable=var_num_images, value=1).pack(side=tk.LEFT, padx=10)
-    tk.Radiobutton(frame_num, text="4", variable=var_num_images, value=4).pack(side=tk.LEFT, padx=10)
-    tk.Radiobutton(frame_num, text="16", variable=var_num_images, value=16).pack(side=tk.LEFT, padx=10)
+    ttk.Radiobutton(frame_num, text="1", variable=var_num_images, value=1).pack(side=tk.LEFT, padx=10)
+    ttk.Radiobutton(frame_num, text="4", variable=var_num_images, value=4).pack(side=tk.LEFT, padx=10)
+    ttk.Radiobutton(frame_num, text="16", variable=var_num_images, value=16).pack(side=tk.LEFT, padx=10)
 
     # Selezione attributi (Select/OptionMenu)
-    frame_attrs = tk.LabelFrame(frame_controls, text="Attributes")
+    frame_attrs = ttk.LabelFrame(frame_controls, text="Attributes")
     frame_attrs.pack(fill="x", pady=5)
-    tk.OptionMenu(frame_attrs, var_gender, "Male", "Female").pack(side=tk.LEFT, padx=5)
-    tk.OptionMenu(frame_attrs, var_age, "Young", "Old").pack(side=tk.LEFT, padx=5)
-    tk.OptionMenu(frame_attrs, var_hair, "Blond", "Not Blond").pack(side=tk.LEFT, padx=5)
-    tk.OptionMenu(frame_attrs, var_smiling, "Smiling", "Not Smiling").pack(side=tk.LEFT, padx=5)
+    ttk.OptionMenu(frame_attrs, var_gender, var_gender.get(), "Male", "Female").pack(side=tk.LEFT, padx=5)
+    ttk.OptionMenu(frame_attrs, var_age, var_age.get(), "Young", "Old").pack(side=tk.LEFT, padx=5)
+    ttk.OptionMenu(frame_attrs, var_hair, var_hair.get(), "Blond", "Not Blond").pack(side=tk.LEFT, padx=5)
+    ttk.OptionMenu(frame_attrs, var_smiling, var_smiling.get(), "Smiling", "Not Smiling").pack(side=tk.LEFT, padx=5)
 
     # Bottone per generare
-    btn_regen = tk.Button(frame_left, text="Regenerate", command=generate_and_show, font=("Arial", 14))
+    btn_regen = ttk.Button(frame_left, text="Regenerate", command=generate_and_show, style="Big.TButton")
     btn_regen.pack(pady=10)
 
-    lbl_img = tk.Label(frame_right)
+    lbl_img = ttk.Label(frame_right)
     lbl_img.pack(padx=10, pady=10)
 
     # Generazione iniziale al partire della GUI
