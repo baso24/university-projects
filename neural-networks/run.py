@@ -8,9 +8,10 @@ import numpy as np
 from train import DCGANGenerator, GANGenerator, get_device, denorm
 
 def generate_and_show():
-    # Prendo il modello selezionato
+    # Prendo il modello selezionato leggendo il pulsante selezionato
     selected_model = var_model_type.get()
     
+    # Controllo errori
     if selected_model not in loaded_models:
         print(f"Error: Model {selected_model} not loaded.")
         return
@@ -18,17 +19,20 @@ def generate_and_show():
     # Prendo il generatore
     generator = loaded_models[selected_model]
 
-    # Prendo il numero di immagini da generare
+    # Prendo il numero di immagini da generare leggendo il pulsante selezionato
     num_img = var_num_images.get()
     
     # Costruzione labels in base ai menu a tendina
+    # Ogni attributo deve essere rappresentato come 1.0 o -1.0 per la rete
     val_male = 1.0 if var_gender.get() == "Male" else -1.0
     val_young = 1.0 if var_age.get() == "Young" else -1.0
     val_blond = 1.0 if var_hair.get() == "Blond" else -1.0
     val_smiling = 1.0 if var_smiling.get() == "Smiling" else -1.0
+    # Creo tensore delle lables con le caratteristiche selezionate, aggiungo una dimensione con unsqueeze e lo ripeto per il numero di immagini
+    # Se voglio generare 16 immagini diventerà una matrice 16x4
     labels = torch.tensor([val_male, val_young, val_blond, val_smiling], device=DEVICE).float().unsqueeze(0).repeat(num_img, 1)
     
-    # Aggiorna titolo
+    # Aggiornamento del titolo
     title_parts = []
     title_parts.append("Male" if val_male > 0 else "Female")
     title_parts.append("Young" if val_young > 0 else "Old")
@@ -40,23 +44,28 @@ def generate_and_show():
         title_parts.append("GAN"+ ", ".join(title_parts))
 
     # Generazione immagini, genero il noise e poi lo passo al generatore che genera le fake images
-    # La size corrisponde al numero di immagini che voglio generare
+    # noise dovrà essere delle dimensioni [num_img, latent_size, 1, 1]
     noise = torch.randn(num_img, latent_size, 1, 1, device=DEVICE)
     with torch.no_grad():
         fake_images = generator(noise, labels)
     
-    # Sistemazione griglia di immagini generate
+    # Sistemazione in griglia delle immagini generate
+    # nrow è il numero di immagini per riga, lo calcolo come radice quadrata del numero totale di immagini
     grid = make_grid(denorm(fake_images.cpu()), nrow=int(num_img**0.5), padding=2)
+    # Conversione in immagine visualizzabile da Tkinter, dalla rete infatti ottengo un tensore torch organizzato come  (Canali, Altezza, Larghezza)
+    # Tkinter vuole (Altezza, Larghezza, Canali) e i valori dei pixel devono essere in [0, 255] come uint8
     ndarr = grid.permute(1, 2, 0).numpy()
-    im_arr = (ndarr * 255).astype(np.uint8)
-    img = Image.fromarray(im_arr)
-    img = img.resize((600, 600), Image.NEAREST)
-    imgtk = ImageTk.PhotoImage(image=img)
-    lbl_img.imgtk = imgtk
-    lbl_img.configure(image=imgtk)
+    image_arr = (ndarr * 255).astype(np.uint8)
+    image = Image.fromarray(image_arr)
+    image = image.resize((600, 600), Image.NEAREST)
+    img_for_tkinter = ImageTk.PhotoImage(image=image)
+    lbl_img.img_for_tkinter = img_for_tkinter
+    lbl_img.configure(image=img_for_tkinter)
 
 if __name__ == '__main__':
     DEVICE = get_device()
+
+    # Parametri "fissi" 
     latent_size = 128
     n_classes = 4
     
@@ -94,7 +103,7 @@ if __name__ == '__main__':
     
     # Inizio GUI Tkinter
     root = tk.Tk()
-    root.title("GAN vs DCGAN: Human faces generator")
+    root.title("GAN and DCGAN: Human faces generator")
 
     # Variabili
     var_num_images = tk.IntVar(value=16)
@@ -146,4 +155,5 @@ if __name__ == '__main__':
 
     # Generazione iniziale al partire della GUI
     generate_and_show()
+
     root.mainloop()

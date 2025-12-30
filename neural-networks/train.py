@@ -13,6 +13,8 @@ from tqdm import tqdm
 from PIL import Image
 
 # Denormalizza le immagini, ogni pixel passa dal range [-1, 1] a [0, 1]
+# Serve a Matplotlib per visualizzare correttamente le immagini
+# Nel training normalizziamo le immagini in [-1, 1] per far funzionare meglio la rete dato che l'output del generatore è una tanh
 def denorm(img_tensors):
   return img_tensors * 0.5 + 0.5
 
@@ -411,6 +413,11 @@ def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, inp
     print("----- Inizio del training -----")
     
     for epoch in range(EPOCHS):
+        epoch_loss_g = 0.0
+        epoch_loss_d = 0.0
+        epoch_real_score = 0.0
+        epoch_fake_score = 0.0
+        
         # Uso tqdm per vedere il progresso batch per batch
         # Mi serve per capire il tempo che ci metterà per ogni epoca...
         pbar = tqdm(train_dl, desc=f"Epoch [{epoch+1}/{EPOCHS}]")
@@ -424,14 +431,26 @@ def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, inp
             # Train discriminator
             loss_d, real_score, fake_score = discriminator.train_step(real_images, labels, generator, optimizer_d)
 
+            # Accumulo i valori per fare la media a fine epoca
+            epoch_loss_g += loss_g
+            epoch_loss_d += loss_d
+            epoch_real_score += real_score
+            epoch_fake_score += fake_score
+
             # Aggiorno la barra di tqdm con le loss rispettive
             pbar.set_postfix({'loss_d': f'{loss_d:.4f}', 'loss_g': f'{loss_g:.4f}'})
 
-        losses_g.append(loss_g)
-        losses_d.append(loss_d)
-        real_scores.append(real_score)
-        fake_scores.append(fake_score)
-        print("Epoch [{}/{}], loss_g: {:.4f}, loss_d: {:.4f}, real_score: {:.4f}, fake_score: {:.4f}".format(epoch+1, EPOCHS, loss_g, loss_d, real_score, fake_score))
+        # Calcolo la media dell'epoca dividendo per il numero di batch
+        avg_loss_g = epoch_loss_g / len(train_dl)
+        avg_loss_d = epoch_loss_d / len(train_dl)
+        avg_real_score = epoch_real_score / len(train_dl)
+        avg_fake_score = epoch_fake_score / len(train_dl)
+
+        losses_g.append(avg_loss_g)
+        losses_d.append(avg_loss_d)
+        real_scores.append(avg_real_score)
+        fake_scores.append(avg_fake_score)
+        print("Epoch [{}/{}], loss_g: {:.4f}, loss_d: {:.4f}, real_score: {:.4f}, fake_score: {:.4f}".format(epoch+1, EPOCHS, avg_loss_g, avg_loss_d, avg_real_score, avg_fake_score))
         
         #Salvo le immagini generate in questa epoca
         save_samples(epoch+start_idx, input_noise, fixed_labels, generator, sample_dir, attr_names, show=False)
