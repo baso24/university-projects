@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from PIL import Image
 
+# Denormalizza le immagini, ogni pixel passa dal range [-1, 1] a [0, 1]
 def denorm(img_tensors):
   return img_tensors * 0.5 + 0.5
 
@@ -256,31 +257,35 @@ class GANDiscriminator(nn.Module):
         return self.network(x)
 
     def train_step(self, real_images, labels, generator, optimizer):
-        # Clear discriminator gradients
+        # Elimino i gradienti calcolati nel passo precedente per evitare accomulazioni
         optimizer.zero_grad()
         
         device = real_images.device
         batch_size = real_images.size(0)
 
-        # Pass real images through discriminator
-        # Passiamo anche le label reali
+        # Passo le immagini e le etichette reali al disciriminatore (chiamo forward)
         real_preds = self(real_images, labels)
+        # Vettore di 1 (il discriminatore deve riconoscere che queste sono immagini vere)
         real_targets = torch.ones(real_images.size(0), 1, device=device)
+        # Calcolo la loss per le immagini reali
         real_loss = F.binary_cross_entropy(real_preds, real_targets)
+        # Metrica di monitoraggio, più lo score si avvicina a 1 più significa che è bravo a riconoscere immagini reali
         real_score = torch.mean(real_preds).item()
 
-        # Generate fake images
+        # Genero immagini false con il generatore a partire da rumore casuale e le etichette uguali a quelle passate prima per le immagini reali
         latent = torch.randn(batch_size, generator.latent_size, 1, 1, device=device)
         fake_images = generator(latent, labels)
 
-        # Pass Fake images through discriminator
-        fake_targets = torch.zeros(fake_images.size(0), 1, device=device)
-        # Al discriminatore passiamo l'immagine falsa MA con le label "richieste"
+        # Passo le immagini false e le etichette al discriminatore
         fake_preds = self(fake_images, labels)
+        # Vettore di 0 (il discriminatore deve riconoscere che queste sono immagini false)
+        fake_targets = torch.zeros(fake_images.size(0), 1, device=device)
+        # Calcolo la loss per le immagini false
         fake_loss = F.binary_cross_entropy(fake_preds, fake_targets)
+        # Metrica di monitoraggio, più lo score si avvicina a 0 più significa che è bravo a riconoscere immagini false
         fake_score = torch.mean(fake_preds).item()
 
-        # Update discriminator weights
+        # La perdita totale è la somma delle due perdite
         loss = real_loss + fake_loss
         loss.backward()
         optimizer.step()
@@ -306,29 +311,36 @@ class GANGenerator(nn.Module):
         )
 
     def forward(self, x, labels):
-        # x potrebbe essere [batch, latent, 1, 1] o [batch, latent]. Lo appiattiamo.
+        # x: [batch_size, latent_size, 1, 1]
+        # labels: [batch_size, n_classes]
+
+        # Appiattiamo il rumore per renderlo compatibile con la GAN (che prende in input vettori a due dimensioni)
+        # [batch_size, latent_size, 1, 1] -> [batch_size, latent_size]
         x = x.view(x.size(0), -1)
+        # Concateno il rumore con le label
         x = torch.cat([x, labels], dim=1)
+        # Output della rete
         out = self.network(x)
-        # Reshape in immagine
+        # Reshape da [batch_size, img_flat_size] a [batch_size, 3, 64, 64]
+        # (Batch_Size, Canali, Altezza, Larghezza), pronto per essere visualizzato o passato al discriminatore.
         return out.view(out.size(0), *self.img_shape)
 
     def train_step(self, discriminator, labels, optimizer, batch_size, device):
-        # Clear generator gradients
+        # Elimino i gradienti calcolati nel passo precedente per evitare accomulazioni
         optimizer.zero_grad()
 
-        # Generate fake images
+        # Genero rumore casuale
         latent = torch.randn(batch_size, self.latent_size, 1, 1, device=device)
         # Il generatore prova a creare un'immagine che soddisfi le label fornite
         fake_images = self(latent, labels)
 
-        # Try to fool the discriminator
-        # Il discriminatore valuta se l'immagine generata sembra reale E coerente con le label
+        # Il discriminatore valuta se l'immagine generata sembra reale e coerente con le label
         preds = discriminator(fake_images, labels)
+        # Vettore di 1 (il generatore vuole che il discriminatore pensi che queste immagini siano reali)
         targets = torch.ones(batch_size, 1, device=device)
+        # Calcolo la loss
         loss = F.binary_cross_entropy(preds, targets)
 
-        # Update generator 
         loss.backward()
         optimizer.step()
 
@@ -445,10 +457,12 @@ if __name__ == '__main__':
     ATTR_CSV = os.path.join(current_dir, '../assets/archive/list_attr_celeba.csv')
     
     DEVICE = get_device()
+    # Hyperparametri di training cambiabili a piacimento
     SUBSET_DIM = 100000 
     EPOCHS = 100
     LEARNING_RATE = 0.0002
     
+    # Valori "fissi" scelti per il training
     latent_size = 128
     image_size = 64
     batch_size = 128
@@ -523,7 +537,7 @@ if __name__ == '__main__':
     labels = torch.tensor(labels_list, device=DEVICE).float()
 
     # TRAINING:
-    # Mi restituisce loss del generatore e del discriminatore per ogni epoca, insieme agli scores dei reali e falsi
+    # Mi restituisce loss del generatore e del discriminatore per ogni epoca, insieme agli scores dei reali e falsi del discriminatore
     losses_g, losses_d, real_scores, fake_scores = train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, labels, generated_images_dir, attr_names)
     
     models_dir = os.path.join(current_dir, 'models')
