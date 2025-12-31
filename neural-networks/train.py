@@ -50,7 +50,7 @@ class CelebADataset(Dataset):
         self.data = []
         
         # apro il file csv degli attributi
-        print(f"Caricamento dataset da {csv_file}...")
+        print(f"Caricamento attributi da {csv_file}...")
         with open(csv_file, 'r') as f:
             reader = csv.reader(f)
             header = next(reader)
@@ -133,7 +133,8 @@ class DCGANDiscriminator(nn.Module):
         
         # Concateniamo i 3 canali RGB con i canali delle label
         x = torch.cat([x, labels], dim=1)
-        return self.network(x)
+        # Output della rete, appiattito a un vettore di dimensione [batch_size, 1]
+        return self.network(x).view(-1, 1)
 
     def train_step(self, real_images, labels, generator, optimizer):
         # Elimino i gradienti calcolati nel passo precedente per evitare accomulazioni
@@ -475,8 +476,8 @@ if __name__ == '__main__':
     
     DEVICE = get_device()
     # Hyperparametri di training cambiabili a piacimento
-    SUBSET_DIM = 50000 
-    EPOCHS = 20
+    SUBSET_DIM = 100000 
+    EPOCHS = 50
     LEARNING_RATE = 0.0002
     
     # Valori "fissi" scelti per il training
