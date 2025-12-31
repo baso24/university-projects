@@ -273,7 +273,7 @@ class GANDiscriminator(nn.Module):
         real_score = torch.mean(real_preds).item()
 
         # Genero immagini false con il generatore a partire da rumore casuale e le etichette uguali a quelle passate prima per le immagini reali
-        latent = torch.randn(batch_size, generator.latent_size, 1, 1, device=device)
+        latent = torch.randn(batch_size, generator.latent_size, device=device)
         fake_images = generator(latent, labels)
 
         # Passo le immagini false e le etichette al discriminatore
@@ -311,18 +311,15 @@ class GANGenerator(nn.Module):
         )
 
     def forward(self, x, labels):
-        # x: [batch_size, latent_size, 1, 1]
+        # x: [batch_size, latent_size]
         # labels: [batch_size, n_classes]
 
-        # Appiattiamo il rumore per renderlo compatibile con la GAN (che prende in input vettori a due dimensioni)
-        # [batch_size, latent_size, 1, 1] -> [batch_size, latent_size]
-        x = x.view(x.size(0), -1)
         # Concateno il rumore con le label
         x = torch.cat([x, labels], dim=1)
         # Output della rete
         out = self.network(x)
         # Reshape da [batch_size, img_flat_size] a [batch_size, 3, 64, 64]
-        # (Batch_Size, Canali, Altezza, Larghezza), pronto per essere visualizzato o passato al discriminatore.
+        # (Batch_Size, Canali, Altezza, Larghezza), pronto per essere visualizzato dalle librerie come MatplotLib o passato al discriminatore.
         return out.view(out.size(0), *self.img_shape)
 
     def train_step(self, discriminator, labels, optimizer, batch_size, device):
@@ -330,7 +327,7 @@ class GANGenerator(nn.Module):
         optimizer.zero_grad()
 
         # Genero rumore casuale
-        latent = torch.randn(batch_size, self.latent_size, 1, 1, device=device)
+        latent = torch.randn(batch_size, self.latent_size, device=device)
         # Il generatore prova a creare un'immagine che soddisfi le label fornite
         fake_images = self(latent, labels)
 
@@ -346,7 +343,7 @@ class GANGenerator(nn.Module):
 
         return loss.item()
 
-def save_samples(index, latent_tensor, labels, generator, sample_dir, attr_names, show=True):
+def save_images(index, latent_tensor, labels, generator, sample_dir, attr_names, show=True):
     # Faccio generare le immagini al generatore
     fake_images = generator(latent_tensor, labels)
     fake_fname = 'generated-images-{0:0=4d}.png'.format(index)
@@ -451,7 +448,7 @@ def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, inp
         print("Epoch [{}/{}], loss_g: {:.4f}, loss_d: {:.4f}, real_score: {:.4f}, fake_score: {:.4f}".format(epoch+1, EPOCHS, avg_loss_g, avg_loss_d, avg_real_score, avg_fake_score))
         
         #Salvo le immagini generate in questa epoca
-        save_samples(epoch+start_idx, input_noise, fixed_labels, generator, sample_dir, attr_names, show=False)
+        save_images(epoch+start_idx, input_noise, fixed_labels, generator, sample_dir, attr_names, show=False)
     
     return losses_g, losses_d, real_scores, fake_scores
 
@@ -531,11 +528,11 @@ if __name__ == '__main__':
     if model_prefix == "gan":
         discriminator = GANDiscriminator(n_classes=n_classes).to(DEVICE)
         generator = GANGenerator(latent_size, n_classes=n_classes).to(DEVICE)
+        input_noise = torch.randn(generated_samples_count, latent_size, device=DEVICE)
     else:
         discriminator = DCGANDiscriminator(n_classes=n_classes).to(DEVICE)
         generator = DCGANGenerator(latent_size, n_classes=n_classes).to(DEVICE)
-    
-    input_noise = torch.randn(generated_samples_count, latent_size, 1, 1, device=DEVICE)
+        input_noise = torch.randn(generated_samples_count, latent_size, 1, 1, device=DEVICE)
 
     # Directory per salvare le immagini generate durante il training
     generated_images_dir = f'{model_prefix}.generated'
@@ -586,5 +583,5 @@ if __name__ == '__main__':
     plt.savefig(os.path.join(permanent_dir, 'scores.png'))
     
     # Salvataggio delle immagini generate finali
-    save_samples(EPOCHS+1, input_noise, labels, generator, generated_images_dir, attr_names, show=False)
-    save_samples(EPOCHS+1, input_noise, labels, generator, permanent_dir, attr_names, show=True)
+    save_images(EPOCHS+1, input_noise, labels, generator, generated_images_dir, attr_names, show=False)
+    save_images(EPOCHS+1, input_noise, labels, generator, permanent_dir, attr_names, show=True)
