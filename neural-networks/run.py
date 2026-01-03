@@ -47,7 +47,10 @@ def generate_and_show():
 
     # Generazione immagini, genero il noise e poi lo passo al generatore che genera le fake images
     # noise dovrà essere delle dimensioni [num_img, latent_size, 1, 1]
-    noise = torch.randn(num_img, latent_size, 1, 1, device=DEVICE)
+    if selected_model == "DCGAN":
+        noise = torch.randn(num_img, latent_size, 1, 1, device=DEVICE)
+    elif selected_model == "GAN":
+         noise = torch.randn(num_img, latent_size, device=DEVICE)
     with torch.no_grad():
         fake_images = generator(noise, labels)
     

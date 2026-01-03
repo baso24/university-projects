@@ -242,7 +242,7 @@ class GANDiscriminator(nn.Module):
         self.n_classes = n_classes
         self.img_flat_size = 3 * 64 * 64
         
-        """Primo modello più semplice
+        
         self.network = nn.Sequential(
             nn.Linear(self.img_flat_size + n_classes, 512),
             nn.LeakyReLU(0.2, inplace=True),
@@ -251,8 +251,8 @@ class GANDiscriminator(nn.Module):
             nn.Linear(256, 1),
             nn.Sigmoid()
         )
+        
         """
-
         #Nuovo modello più complesso
         self.network = nn.Sequential(
             nn.Linear(self.img_flat_size + n_classes, 1024),
@@ -267,7 +267,7 @@ class GANDiscriminator(nn.Module):
             nn.Linear(256, 1),
             nn.Sigmoid()
         )
-        
+        """
 
     def forward(self, x, labels):
         # Appiattiamo l'immagine: [batch, 3, 64, 64] -> [batch, 12288]
@@ -320,7 +320,7 @@ class GANGenerator(nn.Module):
         self.img_shape = (3, 64, 64)
         self.img_flat_size = 3 * 64 * 64
 
-        """Primo modello (più semplice)
+        
         self.network = nn.Sequential(
             nn.Linear(latent_size + n_classes, 256),
             nn.ReLU(True),
@@ -331,8 +331,8 @@ class GANGenerator(nn.Module):
             nn.Linear(1024, self.img_flat_size),
             nn.Tanh()
         )
+        
         """
-
         #Nuovo modello più complesso
         self.network = nn.Sequential(
             nn.Linear(latent_size + n_classes, 512),
@@ -349,7 +349,7 @@ class GANGenerator(nn.Module):
             nn.Linear(4096, self.img_flat_size),
             nn.Tanh()
         )
-        
+        """
 
     def forward(self, x, labels):
         # x: [batch_size, latent_size]
