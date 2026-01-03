@@ -146,7 +146,8 @@ class DCGANDiscriminator(nn.Module):
         # Passo le immagini e le etichette reali al disciriminatore (chiamo forward)
         real_preds = self(real_images, labels)
         # Vettore di 1 (il discriminatore deve riconoscere che queste sono immagini vere)
-        real_targets = torch.ones(real_images.size(0), 1, device=device)
+        # Label smoothing: 0.9 al posto di 1.0 per impedire al discriminatore di essere troppo sicuro
+        real_targets = torch.ones(real_images.size(0), 1, device=device) * 0.9
         # Calcolo la loss per le immagini reali
         real_loss = F.binary_cross_entropy(real_preds, real_targets)
         # Metrica di monitoraggio, più lo score si avvicina a 1 più significa che è bravo a riconoscere immagini reali
@@ -285,7 +286,8 @@ class GANDiscriminator(nn.Module):
         # Passo le immagini e le etichette reali al disciriminatore (chiamo forward)
         real_preds = self(real_images, labels)
         # Vettore di 1 (il discriminatore deve riconoscere che queste sono immagini vere)
-        real_targets = torch.ones(real_images.size(0), 1, device=device)
+        # Label smoothing: 0.9 al posto di 1.0 per impedire al discriminatore di essere troppo sicuro
+        real_targets = torch.ones(real_images.size(0), 1, device=device) * 0.9
         # Calcolo la loss per le immagini reali
         real_loss = F.binary_cross_entropy(real_preds, real_targets)
         # Metrica di monitoraggio, più lo score si avvicina a 1 più significa che è bravo a riconoscere immagini reali
@@ -334,16 +336,16 @@ class GANGenerator(nn.Module):
         #Nuovo modello più complesso
         self.network = nn.Sequential(
             nn.Linear(latent_size + n_classes, 512),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 1024),
             nn.BatchNorm1d(1024),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(1024, 2048),
             nn.BatchNorm1d(2048),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(2048, 4096),
             nn.BatchNorm1d(4096),
-            nn.ReLU(True),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(4096, self.img_flat_size),
             nn.Tanh()
         )
@@ -511,9 +513,10 @@ if __name__ == '__main__':
     ATTR_CSV = os.path.join(current_dir, '../assets/archive/list_attr_celeba.csv')
     
     DEVICE = get_device()
+    
     # Hyperparametri di training cambiabili a piacimento
     SUBSET_DIM = 100000 
-    EPOCHS = 100
+    EPOCHS = 20
     LEARNING_RATE = 0.0002
     
     # Valori "fissi" scelti per il training
