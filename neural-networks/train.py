@@ -515,7 +515,7 @@ if __name__ == '__main__':
     DEVICE = get_device()
     
     # Hyperparametri di training cambiabili a piacimento
-    SUBSET_DIM = 100000 
+    SUBSET_DIM = 50000 
     EPOCHS = 20
     LEARNING_RATE = 0.0002
     
