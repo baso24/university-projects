@@ -240,6 +240,7 @@ class GANDiscriminator(nn.Module):
         super().__init__()
         self.n_classes = n_classes
         self.img_flat_size = 3 * 64 * 64
+        
         """Primo modello più semplice
         self.network = nn.Sequential(
             nn.Linear(self.img_flat_size + n_classes, 512),
@@ -452,8 +453,9 @@ def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, inp
         epoch_fake_score = 0.0
         
         # Uso tqdm per vedere il progresso batch per batch
-        # Mi serve per capire il tempo che ci metterà per ogni epoca...
+        # Mi serve per capire il tempo che ci metterà per ogni epoca
         pbar = tqdm(train_dl, desc=f"Epoch [{epoch+1}/{EPOCHS}]")
+        # Per ogni batch di 128 immagini reali
         for i, (real_images, labels) in enumerate(pbar):
             real_images = real_images.to(device)
             labels = labels.to(device)
@@ -473,7 +475,7 @@ def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, inp
             # Aggiorno la barra di tqdm con le loss rispettive
             pbar.set_postfix({'loss_d': f'{loss_d:.4f}', 'loss_g': f'{loss_g:.4f}'})
 
-        # Calcolo la media dell'epoca dividendo per il numero di batch
+        # Calcolo la media delle loss dell'epoca dividendo per il numero di immagini nel batch
         avg_loss_g = epoch_loss_g / len(train_dl)
         avg_loss_d = epoch_loss_d / len(train_dl)
         avg_real_score = epoch_real_score / len(train_dl)
@@ -525,7 +527,8 @@ if __name__ == '__main__':
     generated_samples_count = 16
 
     # Definizione delle trasformazioni da applicare alle immagini e caricamento del dataset
-    transform = T.Compose([T.Resize(image_size),
+    transform = T.Compose([
+        T.Resize(image_size),
         T.CenterCrop(image_size),
         T.ToTensor(),
         T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
@@ -538,8 +541,8 @@ if __name__ == '__main__':
 
     # Creazione subset del dataset
     subset_size = min(SUBSET_DIM, len(full_dataset))
-    indices = torch.randperm(len(full_dataset))[:subset_size]
-    train_dataset = torch.utils.data.Subset(full_dataset, indices)
+    random_indices = torch.randperm(len(full_dataset))[:subset_size]
+    train_dataset = torch.utils.data.Subset(full_dataset, random_indices)
 
     # Vediamo la distribuzione delle classi nel subset creato
     print("Analisi distribuzione classi nel subset...")
@@ -588,7 +591,7 @@ if __name__ == '__main__':
         labels_list.append(l)
     labels = torch.tensor(labels_list, device=DEVICE).float()
 
-    # TRAINING:
+    # TRAINING
     # Mi restituisce loss del generatore e del discriminatore per ogni epoca, insieme agli scores dei reali e falsi del discriminatore
     losses_g, losses_d, real_scores, fake_scores = train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, labels, generated_images_dir, attr_names)
     
