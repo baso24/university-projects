@@ -1,39 +1,39 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import copy
 from matplotlib.widgets import Slider
 
+# Variabili globali
+LEARNING_RATE = 0.5 
+EPOCHS = 10000      
+SNAPSHOTS = [0, 500, 2000, 10000] 
+X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) 
+y = np.array([[0], [1], [1], [0]])
+net_history = []   
+
+# Funzione di attivazione sigmoid e sua derivata
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
-
 def sigmoid_derivative(x):
-    return x * (1 - x) # Nota: qui assumiamo x sia già l'output della sigmoide
+    return x * (1 - x)
 class XORNetwork:
     def __init__(self):
-        # Architettura 2-2-1
-        # Pesi Input -> Hidden (2 neuroni, 2 input ciascuno)
+        # Inizializzazione random dei pesi
         self.W1 = np.random.uniform(size=(2, 2)) 
         self.b1 = np.random.uniform(size=(1, 2))
-        
-        # Pesi Hidden -> Output (1 neurone, 2 input)
         self.W2 = np.random.uniform(size=(2, 1))
         self.b2 = np.random.uniform(size=(1, 1))
-        
-        # Per salvare la storia della loss
+        # Per salvare i valori della loss function
         self.loss_history = []
 
     def forward(self, X):
-        # Layer Nascosto
+        # Calcolo esplicito dei layer
         self.z1 = np.dot(X, self.W1) + self.b1
-        self.a1 = sigmoid(self.z1) # Attivazioni hidden (coordinate nello hidden space)
-        
-        # Layer Output
+        self.a1 = sigmoid(self.z1) 
         self.z2 = np.dot(self.a1, self.W2) + self.b2
         self.output = sigmoid(self.z2)
         return self.output
 
     def backward(self, X, y):
-        # Calcolo dell'errore (MSE derivative chain rule semplificata)
         # Errore rispetto all'output
         output_error = y - self.output
         output_delta = output_error * sigmoid_derivative(self.output)
@@ -42,7 +42,7 @@ class XORNetwork:
         hidden_error = output_delta.dot(self.W2.T)
         hidden_delta = hidden_error * sigmoid_derivative(self.a1)
         
-        # Aggiornamento pesi (Gradient Descent)
+        # Aggiornamento pesi e bias
         self.W2 += self.a1.T.dot(output_delta) * LEARNING_RATE
         self.b2 += np.sum(output_delta, axis=0, keepdims=True) * LEARNING_RATE
         self.W1 += X.T.dot(hidden_delta) * LEARNING_RATE
@@ -54,19 +54,20 @@ class XORNetwork:
         loss = 0.5 * np.mean((y - output) ** 2)
         self.loss_history.append(loss)
 
-# --- VISUALIZZAZIONE ---
+# Visualizzazione dei risultati della rete
 def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2):
-    # Creazione Grid per la superficie di decisione
+    # Creazione griglia
     xx, yy = np.meshgrid(np.linspace(-5, 5, 100), np.linspace(-5, 5, 100))
     grid = np.c_[xx.ravel(), yy.ravel()]
     
-    # Forward pass sulla griglia
+    # -- Input layer --
+    # Ricalcolo forward pass sulla griglia
     z1_grid = np.dot(grid, net.W1) + net.b1
     a1_grid = sigmoid(z1_grid)
     z2_grid = np.dot(a1_grid, net.W2) + net.b2
     preds = sigmoid(z2_grid).reshape(xx.shape)
 
-    # --- PLOT INPUT SPACE ---
+    # Plot dello spazio di input con decision boundary
     ax_surface.contourf(xx, yy, preds, levels=50, cmap="RdBu", alpha=0.6)
     ax_surface.scatter(X[:,0], X[:,1], c=y.ravel(), cmap="RdBu", edgecolors='black', s=100, linewidth=2)
     ax_surface.set_title(f"Input Space (Epoch {epoch})", fontsize=10)
@@ -75,23 +76,27 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2):
     ax_surface.set_xlim(-0.6, 1.6)
     ax_surface.set_ylim(-0.6, 1.6)
     
-    # Disegno le linee dei neuroni nascosti
+    # Disegno le linee dei neuroni dell'hidden layer
     # Equazione neurone: w1*x + w2*y + b = 0  =>  y = -(w1*x + b) / w2
     x_line = np.linspace(-5, 5, 100)
     colors = ['green', 'orange']
-    for i in range(2): # Per ogni neurone nascosto
+    # Per ogni neurone nell'hidden layer
+    for i in range(2): 
         w_x, w_y = net.W1[0, i], net.W1[1, i]
         b = net.b1[0, i]
-        if abs(w_y) > 0.001: # Evita divisione per zero
+        # Evita divisione per zero
+        if abs(w_y) > 0.001: 
+            # Calcolo e plotto y per la linea di decisione
             y_line = -(w_x * x_line + b) / w_y
             ax_surface.plot(x_line, y_line, color=colors[i], linestyle='--', label=f'Hidden N{i+1}')
     ax_surface.legend(loc='lower right', fontsize='x-small')
 
-    # --- PLOT HIDDEN SPACE ---
+    # -- Hidden layer --
     # Calcoliamo dove finiscono i 4 punti XOR nello spazio nascosto
     _, hidden_points = list(zip(*[ (net.forward(x.reshape(1,2)), net.a1[0]) for x in X ]))
     hidden_points = np.array(hidden_points)
     
+    # Plot dell'hidden layer space
     ax_hidden.scatter(hidden_points[:,0], hidden_points[:,1], c=y.ravel(), cmap="RdBu", edgecolors='black', s=100, linewidth=2)
     ax_hidden.set_title(f"Hidden Space (Epoch {epoch})", fontsize=10)
     ax_hidden.set_xlabel("Activation H1", fontsize=9)
@@ -100,18 +105,19 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2):
     ax_hidden.set_ylim(-0.6, 1.6)
 
     # Disegno la linea di separazione del neurone di output
-    # Equazione output: v1*h1 + v2*h2 + c = 0 (dove h1, h2 sono gli assi qui)
+    # Equazione output: v1*h1 + v2*h2 + c = 0 -> h2 = -(v1*h1 + c) / v2 (dove h1, h2 sono gli assi qui)
     v1, v2 = net.W2[0, 0], net.W2[1, 0]
     c = net.b2[0, 0]
     
     h_line = np.linspace(-5, 5, 100)
+     # Evita divisione per zero
     if abs(v2) > 0.001:
+        # Calcolo e plotto y per la linea di decisione
         v_line = -(v1 * h_line + c) / v2
         ax_hidden.plot(h_line, v_line, color='black', linestyle='--', linewidth=2, label='Output Sep.')
-        
     ax_hidden.legend(loc='lower right', fontsize='x-small')
 
-    # --- PLOT ACTIVATION MAPS ---
+    # -- Activation maps dei neuroni dell'hidden layer --
     # Activation Neuron 1
     act1 = a1_grid[:, 0].reshape(xx.shape)
     ax_act1.contourf(xx, yy, act1, levels=50, cmap="Greys", vmin=0, vmax=1)
@@ -132,7 +138,9 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2):
     ax_act2.set_xlim(-0.6, 1.6)
     ax_act2.set_ylim(-0.6, 1.6)
 
+# Funzione di aggiornamento dei grafici allo spostamento dello slider
 def update(val):
+    # Prendo valore indice dello slider (numero epoch)
     idx = int(slider.val)
     state = net_history[idx]
     slider.valtext.set_text(f"{state['epoch']}")
@@ -159,18 +167,11 @@ def update(val):
     
     fig.canvas.draw_idle()
 
-if __name__ == "__main__":
-
-    LEARNING_RATE = 0.5 
-    EPOCHS = 10000      
-    SNAPSHOTS = [0, 500, 2000, 10000] 
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) 
-    y = np.array([[0], [1], [1], [0]])             
+if __name__ == "__main__":          
     
     net = XORNetwork()
-    
-    net_history = []
 
+    # Training della rete e salvataggio degli snapshots
     for epoch in range(EPOCHS + 1):
         net.train(X, y)
         if epoch in SNAPSHOTS:
@@ -181,6 +182,7 @@ if __name__ == "__main__":
                 'loss': list(net.loss_history)
             })
 
+    # Creazione figura e layout
     fig = plt.figure(figsize=(16, 8))
     plt.subplots_adjust(left=0.077, right=0.95, bottom=0.137, top=0.877, hspace=0.336, wspace=0.423)
     fig.suptitle("XOR Network Training Dashboard", fontsize=14, fontweight='bold')
@@ -200,5 +202,6 @@ if __name__ == "__main__":
     slider = Slider(ax_slider, 'Epoch', 0, len(net_history)-1, valinit=0, valstep=1)
     slider.on_changed(update)
 
+    # Plot
     update(0)
     plt.show()
