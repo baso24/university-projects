@@ -583,7 +583,7 @@ if __name__ == '__main__':
     os.makedirs(generated_images_dir, exist_ok=True)
     
     # Directory permanente basata sui parametri di training
-    permanent_dir = f'{model_prefix}.{SUBSET_DIM}subset.{EPOCHS}epochs.{LEARNING_RATE}lr'
+    permanent_dir = os.path.join(current_dir, f'{model_prefix}.{SUBSET_DIM}subset.{EPOCHS}epochs.{LEARNING_RATE}lr')
     os.makedirs(permanent_dir, exist_ok=True)
 
     # Generiamo tutte le combinazioni possibili di attributi (2^4 = 16 combinazioni)
