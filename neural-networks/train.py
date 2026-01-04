@@ -579,7 +579,7 @@ if __name__ == '__main__':
         input_noise = torch.randn(generated_samples_count, latent_size, 1, 1, device=DEVICE)
 
     # Directory per salvare le immagini generate durante il training
-    generated_images_dir = f'{model_prefix}.generated'
+    generated_images_dir = os.path.join(current_dir, f'{model_prefix}.generated')
     os.makedirs(generated_images_dir, exist_ok=True)
     
     # Directory permanente basata sui parametri di training
