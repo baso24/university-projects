@@ -384,9 +384,9 @@ class GANGenerator(nn.Module):
 
         return loss.item()
 
-def save_images(index, latent_tensor, labels, generator, sample_dir, attr_names, show=True):
+def save_images(index, input_noise, labels, generator, sample_dir, attr_names, show=True):
     # Faccio generare le immagini al generatore
-    fake_images = generator(latent_tensor, labels)
+    fake_images = generator(input_noise, labels)
     fake_fname = 'generated-images-{0:0=4d}.png'.format(index)
     
     images = denorm(fake_images).cpu().detach()
@@ -515,9 +515,9 @@ if __name__ == '__main__':
     DEVICE = get_device()
     
     # Hyperparametri di training cambiabili a piacimento
-    SUBSET_DIM = 75000 
-    EPOCHS = 30
-    LEARNING_RATE = 0.0002
+    SUBSET_DIM = 50000 
+    EPOCHS = 10
+    LEARNING_RATE = 0.0001
     
     # Valori "fissi" scelti per il training
     latent_size = 128

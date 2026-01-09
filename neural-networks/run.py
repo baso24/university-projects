@@ -70,7 +70,7 @@ def generate_and_show():
 if __name__ == '__main__':
     DEVICE = get_device()
 
-    # Parametri "fissi" 
+    # Parametri fissi
     latent_size = 128
     n_classes = 4
     
