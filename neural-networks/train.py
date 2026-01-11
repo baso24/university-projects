@@ -88,6 +88,15 @@ class CelebADataset(Dataset):
             
         return image, torch.tensor(attributes, dtype=torch.float32)
 
+# Inizializzazione dei pesi specifica per DCGAN (Normal distribution 0.0, 0.02)
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
+
 class DCGANDiscriminator(nn.Module):
     def __init__(self, n_classes=3):
         super().__init__()
@@ -461,12 +470,12 @@ def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, inp
         for i, (real_images, labels) in enumerate(pbar):
             real_images = real_images.to(device)
             labels = labels.to(device)
+                        
+            # Train discriminator
+            loss_d, real_score, fake_score = discriminator.train_step(real_images, labels, generator, optimizer_d)
             
             # Train generator
             loss_g = generator.train_step(discriminator, labels, optimizer_g, real_images.size(0), device)
-            
-            # Train discriminator
-            loss_d, real_score, fake_score = discriminator.train_step(real_images, labels, generator, optimizer_d)
 
             # Accumulo i valori per fare la media a fine epoca
             epoch_loss_g += loss_g
@@ -515,9 +524,9 @@ if __name__ == '__main__':
     DEVICE = get_device()
     
     # Hyperparametri di training cambiabili a piacimento
-    SUBSET_DIM = 50000 
-    EPOCHS = 10
-    LEARNING_RATE = 0.0001
+    SUBSET_DIM = 10000 
+    EPOCHS = 20
+    LEARNING_RATE = 0.0002
     
     # Valori "fissi" scelti per il training
     latent_size = 128
@@ -576,6 +585,9 @@ if __name__ == '__main__':
     else:
         discriminator = DCGANDiscriminator(n_classes=n_classes).to(DEVICE)
         generator = DCGANGenerator(latent_size, n_classes=n_classes).to(DEVICE)
+        # Applicazione dell'inizializzazione dei pesi
+        discriminator.apply(weights_init)
+        generator.apply(weights_init)
         input_noise = torch.randn(generated_samples_count, latent_size, 1, 1, device=DEVICE)
 
     # Directory per salvare le immagini generate durante il training
