@@ -2,22 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
-# Variabili globali
-LEARNING_RATE = 0.5 
-EPOCHS = 10000      
-SNAPSHOTS = [0, 500, 2000, 10000] 
-X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) 
-y = np.array([[0], [1], [1], [0]])
-net_history = []   
-
 # Funzione di attivazione sigmoid e sua derivata
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 def sigmoid_derivative(x):
     return x * (1 - x)
+
 class XORNetwork:
     def __init__(self):
-        # Inizializzazione random dei pesi
+        # Inizializzazione random dei pesi e dei bias
         self.W1 = np.random.uniform(size=(2, 2)) 
         self.b1 = np.random.uniform(size=(1, 2))
         self.W2 = np.random.uniform(size=(2, 1))
@@ -26,14 +19,14 @@ class XORNetwork:
         self.loss_history = []
 
     def forward(self, X):
-        # Calcolo esplicito dei layer
+        # Calcolo esplicito di tutti i layer della rete
         self.z1 = np.dot(X, self.W1) + self.b1
         self.a1 = sigmoid(self.z1) 
         self.z2 = np.dot(self.a1, self.W2) + self.b2
         self.output = sigmoid(self.z2)
         return self.output
 
-    def backward(self, X, y):
+    def backward(self, X, y, learning_rate):
         # Errore rispetto all'output
         output_error = y - self.output
         output_delta = output_error * sigmoid_derivative(self.output)
@@ -43,19 +36,19 @@ class XORNetwork:
         hidden_delta = hidden_error * sigmoid_derivative(self.a1)
         
         # Aggiornamento pesi e bias
-        self.W2 += self.a1.T.dot(output_delta) * LEARNING_RATE
-        self.b2 += np.sum(output_delta, axis=0, keepdims=True) * LEARNING_RATE
-        self.W1 += X.T.dot(hidden_delta) * LEARNING_RATE
-        self.b1 += np.sum(hidden_delta, axis=0, keepdims=True) * LEARNING_RATE
+        self.W2 += self.a1.T.dot(output_delta) * learning_rate
+        self.b2 += np.sum(output_delta, axis=0, keepdims=True) * learning_rate
+        self.W1 += X.T.dot(hidden_delta) * learning_rate
+        self.b1 += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
 
-    def train(self, X, y):
+    def train(self, X, y, learning_rate):
         output = self.forward(X)
-        self.backward(X, y)
+        self.backward(X, y, learning_rate)
         loss = 0.5 * np.mean((y - output) ** 2)
         self.loss_history.append(loss)
 
 # Visualizzazione dei risultati della rete
-def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2):
+def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
     # Creazione griglia
     xx, yy = np.meshgrid(np.linspace(-5, 5, 100), np.linspace(-5, 5, 100))
     grid = np.c_[xx.ravel(), yy.ravel()]
@@ -139,7 +132,7 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2):
     ax_act2.set_ylim(-0.6, 1.6)
 
 # Funzione di aggiornamento dei grafici allo spostamento dello slider
-def update(val):
+def update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y):
     # Prendo valore indice dello slider (numero epoch)
     idx = int(slider.val)
     state = net_history[idx]
@@ -151,7 +144,7 @@ def update(val):
     
     # Pulisci e ridisegna
     ax1.clear(); ax2.clear(); ax3.clear(); ax4.clear(); ax_loss.clear()
-    plot_results(net, state['epoch'], ax1, ax2, ax3, ax4)
+    plot_results(net, state['epoch'], ax1, ax2, ax3, ax4, X, y)
     
     # Plot Loss
     full_loss = net_history[-1]['loss']
@@ -167,13 +160,21 @@ def update(val):
     
     fig.canvas.draw_idle()
 
-if __name__ == "__main__":          
+if __name__ == "__main__":    
+    
+    #Parametri rete e training
+    LEARNING_RATE = 0.5 
+    EPOCHS = 10000      
+    SNAPSHOTS = [0, 500, 2000, 10000] 
+    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) 
+    y = np.array([[0], [1], [1], [0]])
+    net_history = []        
     
     net = XORNetwork()
 
     # Training della rete e salvataggio degli snapshots
     for epoch in range(EPOCHS + 1):
-        net.train(X, y)
+        net.train(X, y, LEARNING_RATE)
         if epoch in SNAPSHOTS:
             net_history.append({
                 'epoch': epoch,
@@ -188,7 +189,7 @@ if __name__ == "__main__":
     fig.suptitle("XOR Network Training Dashboard", fontsize=14, fontweight='bold')
     fig.text(0.5, 0.94, "Legend: Red Points = Class 0 (Target 0), Blue Points = Class 1 (Target 1) | Activation Maps: White=0 (Inactive), Black=1 (Active)", 
              ha='center', fontsize=7, bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
-
+    
     # Creazione griglia per tutti i grafici
     gs = fig.add_gridspec(2, 4, height_ratios=[2, 1])
     ax1 = fig.add_subplot(gs[0, 0])
@@ -200,8 +201,9 @@ if __name__ == "__main__":
     # Slider
     ax_slider = plt.axes([0.25, 0.05, 0.5, 0.03])
     slider = Slider(ax_slider, 'Epoch', 0, len(net_history)-1, valinit=0, valstep=1)
-    slider.on_changed(update)
+    # Funzione di callback per lo slider che richiama update (con il val = valore corrente nello slider)
+    slider.on_changed(lambda val: update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y))
 
-    # Plot
-    update(0)
+    # Plot iniziale con val = 0
+    update(0, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y)
     plt.show()
