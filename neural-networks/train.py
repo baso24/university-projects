@@ -525,7 +525,7 @@ if __name__ == '__main__':
     
     # Hyperparametri di training cambiabili a piacimento
     SUBSET_DIM = 10000 
-    EPOCHS = 20
+    EPOCHS = 50
     LEARNING_RATE = 0.0002
     
     # Valori "fissi" scelti per il training
