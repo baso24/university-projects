@@ -171,7 +171,8 @@ def update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y
 
 if __name__ == "__main__":    
     
-    #Parametri rete e training
+    # Parametri rete e training
+    # Se si vuole aumentare il numero di epochs vanno ridefiniti anche gli snapshots...
     LEARNING_RATE = 0.5 
     EPOCHS = 2000      
     SNAPSHOTS = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1250, 1500, 1750, 2000] 
