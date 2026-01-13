@@ -444,7 +444,7 @@ def save_images(index, input_noise, labels, generator, sample_dir, attr_names, s
     else:
         plt.close()
 
-def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, input_noise, fixed_labels, sample_dir, attr_names, start_idx=1):
+def train(EPOCHS, GENERATOR_LEARNING_RATE, DISCRIMINATOR_LEARNING_RATE, discriminator, generator, train_dl, device, input_noise, fixed_labels, sample_dir, attr_names, start_idx=1):
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     
@@ -452,8 +452,8 @@ def train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, device, inp
     losses_d = []
     real_scores = []
     fake_scores = []
-    optimizer_d = torch.optim.Adam(discriminator.parameters(), LEARNING_RATE, betas=(0.5, 0.999))
-    optimizer_g = torch.optim.Adam(generator.parameters(), LEARNING_RATE, betas=(0.5, 0.999))
+    optimizer_d = torch.optim.Adam(discriminator.parameters(), DISCRIMINATOR_LEARNING_RATE, betas=(0.5, 0.999))
+    optimizer_g = torch.optim.Adam(generator.parameters(), GENERATOR_LEARNING_RATE, betas=(0.5, 0.999))
     
     print("----- Inizio del training -----")
     
@@ -526,7 +526,8 @@ if __name__ == '__main__':
     # Hyperparametri di training cambiabili a piacimento
     SUBSET_DIM = 10000 
     EPOCHS = 50
-    LEARNING_RATE = 0.0002
+    GENERATOR_LEARNING_RATE = 0.0004
+    DISCRMINATOR_LEARNING_RATE = 0.0002
     
     # Valori "fissi" scelti per il training
     latent_size = 128
@@ -608,7 +609,7 @@ if __name__ == '__main__':
 
     # TRAINING
     # Mi restituisce loss del generatore e del discriminatore per ogni epoca, insieme agli scores dei reali e falsi del discriminatore
-    losses_g, losses_d, real_scores, fake_scores = train(EPOCHS, LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, labels, generated_images_dir, attr_names)
+    losses_g, losses_d, real_scores, fake_scores = train(EPOCHS, GENERATOR_LEARNING_RATE, DISCRMINATOR_LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, labels, generated_images_dir, attr_names)
     
     models_dir = os.path.join(current_dir, 'models')
     os.makedirs(models_dir, exist_ok=True)
