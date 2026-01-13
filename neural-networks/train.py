@@ -525,9 +525,9 @@ if __name__ == '__main__':
     
     # Hyperparametri di training cambiabili a piacimento
     SUBSET_DIM = 10000 
-    EPOCHS = 50
+    EPOCHS = 100
     GENERATOR_LEARNING_RATE = 0.0004
-    DISCRMINATOR_LEARNING_RATE = 0.0002
+    DISCRIMINATOR_LEARNING_RATE = 0.0002
     
     # Valori "fissi" scelti per il training
     latent_size = 128
@@ -596,7 +596,7 @@ if __name__ == '__main__':
     os.makedirs(generated_images_dir, exist_ok=True)
     
     # Directory permanente basata sui parametri di training
-    permanent_dir = os.path.join(current_dir, f'{model_prefix}.{SUBSET_DIM}subset.{EPOCHS}epochs.{LEARNING_RATE}lr')
+    permanent_dir = os.path.join(current_dir, f'{model_prefix}.{SUBSET_DIM}subset.{EPOCHS}epochs.{DISCRIMINATOR_LEARNING_RATE}lr.{GENERATOR_LEARNING_RATE}lr')
     os.makedirs(permanent_dir, exist_ok=True)
 
     # Generiamo tutte le combinazioni possibili di attributi (2^4 = 16 combinazioni)
@@ -609,7 +609,7 @@ if __name__ == '__main__':
 
     # TRAINING
     # Mi restituisce loss del generatore e del discriminatore per ogni epoca, insieme agli scores dei reali e falsi del discriminatore
-    losses_g, losses_d, real_scores, fake_scores = train(EPOCHS, GENERATOR_LEARNING_RATE, DISCRMINATOR_LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, labels, generated_images_dir, attr_names)
+    losses_g, losses_d, real_scores, fake_scores = train(EPOCHS, GENERATOR_LEARNING_RATE, DISCRIMINATOR_LEARNING_RATE, discriminator, generator, train_dl, DEVICE, input_noise, labels, generated_images_dir, attr_names)
     
     models_dir = os.path.join(current_dir, 'models')
     os.makedirs(models_dir, exist_ok=True)
