@@ -364,7 +364,7 @@ class GANGenerator(nn.Module):
         # x: [batch_size, latent_size]
         # labels: [batch_size, n_classes]
 
-        # Concateno il rumore con le label
+        # Concateno il latent con le label
         x = torch.cat([x, labels], dim=1)
         # Output della rete
         out = self.network(x)
