@@ -36,10 +36,10 @@ class XORNetwork:
         hidden_delta = hidden_error * sigmoid_derivative(self.a1)
         
         # Aggiornamento pesi e bias
-        self.W2 += self.a1.T.dot(output_delta) * learning_rate
-        self.b2 += np.sum(output_delta, axis=0, keepdims=True) * learning_rate
         self.W1 += X.T.dot(hidden_delta) * learning_rate
         self.b1 += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
+        self.W2 += self.a1.T.dot(output_delta) * learning_rate
+        self.b2 += np.sum(output_delta, axis=0, keepdims=True) * learning_rate
 
     def train(self, X, y, learning_rate):
         output = self.forward(X)
@@ -49,16 +49,21 @@ class XORNetwork:
 
 # Visualizzazione dei risultati della rete
 def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
-    # Creazione griglia
+    # Creazione griglia di punti per visualizzare lo sfondo colorato (decision boundary)
+    # np.linspace genera 100 numeri equispaziati tra -5 e 5.
+    # np.meshgrid crea due matrici 2D (100x100): 'xx' per le coordinate x e 'yy' per le y.
     xx, yy = np.meshgrid(np.linspace(-5, 5, 100), np.linspace(-5, 5, 100))
+    # 'xx.ravel()' e 'yy.ravel()' appiattiscono le matrici in vettori 1D (da 100x100 a 10000).
+    # np.c_ li concatena colonna per colonna creando una matrice (10000, 2).
+    # 'grid' è quindi l'elenco di tutti i punti (x,y) del piano che passeremo alla rete.
     grid = np.c_[xx.ravel(), yy.ravel()]
     
     # -- Input layer --
-    # Ricalcolo forward pass sulla griglia
-    z1_grid = np.dot(grid, net.W1) + net.b1
-    a1_grid = sigmoid(z1_grid)
-    z2_grid = np.dot(a1_grid, net.W2) + net.b2
-    preds = sigmoid(z2_grid).reshape(xx.shape)
+    # Eseguiamo il forward pass su tutta la griglia (10000 punti) per colorare lo sfondo.
+    # Usiamo net.forward che calcola tutto e ci restituisce l'output finale.
+    preds = net.forward(grid).reshape(xx.shape)
+    # Salviamo le attivazioni dell'hidden layer (net.a1) per disegnare le activation maps
+    a1_grid = net.a1
 
     # Plot dello spazio di input con decision boundary
     ax_surface.contourf(xx, yy, preds, levels=50, cmap="RdBu", alpha=0.6)
@@ -85,9 +90,11 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
     ax_surface.legend(loc='lower right', fontsize='x-small')
 
     # -- Hidden layer --
-    # Calcoliamo dove finiscono i 4 punti XOR nello spazio nascosto
-    _, hidden_points = list(zip(*[ (net.forward(x.reshape(1,2)), net.a1[0]) for x in X ]))
-    hidden_points = np.array(hidden_points)
+    # Calcoliamo dove finiscono i 4 punti XOR nello spazio nascosto (output del primo layer)
+    # Possiamo passare l'intera matrice X (4x2) al forward pass in un colpo solo.
+    # La rete calcolerà le attivazioni per tutti e 4 i punti contemporaneamente.
+    net.forward(X)
+    hidden_points = net.a1
     
     # Plot dell'hidden layer space
     ax_hidden.scatter(hidden_points[:,0], hidden_points[:,1], c=y.ravel(), cmap="RdBu", edgecolors='black', s=100, linewidth=2)
@@ -101,7 +108,6 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
     # Equazione output: v1*h1 + v2*h2 + c = 0 -> h2 = -(v1*h1 + c) / v2 (dove h1, h2 sono gli assi qui)
     v1, v2 = net.W2[0, 0], net.W2[1, 0]
     c = net.b2[0, 0]
-    
     h_line = np.linspace(-5, 5, 100)
      # Evita divisione per zero
     if abs(v2) > 0.001:
@@ -134,15 +140,18 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
 # Funzione di aggiornamento dei grafici allo spostamento dello slider
 def update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y):
     # Prendo valore indice dello slider (numero epoch)
-    idx = int(slider.val)
+    idx = int(val)
     state = net_history[idx]
     slider.valtext.set_text(f"{state['epoch']}")
     
     # Ripristina pesi per la visualizzazione
-    net.W1, net.b1 = state['W1'], state['b1']
-    net.W2, net.b2 = state['W2'], state['b2']
+    net.W1 = state['W1']
+    net.b1 = state['b1']
+    net.W2 = state['W2']
+    net.b2 = state['b2']
     
-    # Pulisci e ridisegna
+    # Pulisci e ridisegna con il nuovo stato della rete
+    # Quindi con i pesi e i bias dell'epoch selezionata
     ax1.clear(); ax2.clear(); ax3.clear(); ax4.clear(); ax_loss.clear()
     plot_results(net, state['epoch'], ax1, ax2, ax3, ax4, X, y)
     
@@ -150,7 +159,7 @@ def update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y
     full_loss = net_history[-1]['loss']
     ax_loss.plot(full_loss, label='Training Loss')
     # Marker corrente
-    curr_loss_val = full_loss[state['epoch']] if state['epoch'] < len(full_loss) else full_loss[-1]
+    curr_loss_val = full_loss[state['epoch']]
     ax_loss.scatter(state['epoch'], curr_loss_val, color='red', s=50, zorder=5, label='Current Epoch')
     ax_loss.set_title("Risk Function Evolution", fontsize=10)
     ax_loss.set_xlabel("Epochs", fontsize=9)
@@ -164,8 +173,8 @@ if __name__ == "__main__":
     
     #Parametri rete e training
     LEARNING_RATE = 0.5 
-    EPOCHS = 10000      
-    SNAPSHOTS = [0, 500, 2000, 10000] 
+    EPOCHS = 2000      
+    SNAPSHOTS = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1250, 1500, 1750, 2000] 
     X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]]) 
     y = np.array([[0], [1], [1], [0]])
     net_history = []        

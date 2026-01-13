@@ -152,7 +152,7 @@ class DCGANDiscriminator(nn.Module):
         device = real_images.device
         batch_size = real_images.size(0)
 
-        # Passo le immagini e le etichette reali al disciriminatore (chiamo forward)
+        # Passo le immagini e le etichette reali al disciriminatore
         real_preds = self(real_images, labels)
         # Vettore di 1 (il discriminatore deve riconoscere che queste sono immagini vere)
         # Label smoothing: 0.9 al posto di 1.0 per impedire al discriminatore di essere troppo sicuro
@@ -524,7 +524,7 @@ if __name__ == '__main__':
     DEVICE = get_device()
     
     # Hyperparametri di training cambiabili a piacimento
-    SUBSET_DIM = 10000 
+    SUBSET_DIM = 7500 
     EPOCHS = 100
     GENERATOR_LEARNING_RATE = 0.0004
     DISCRIMINATOR_LEARNING_RATE = 0.0002
