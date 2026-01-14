@@ -28,7 +28,7 @@ class XORNetwork:
 
     def backward(self, X, y, learning_rate):
         # Errore rispetto all'output
-        output_error = y - self.output
+        output_error = self.output - y
         output_delta = output_error * sigmoid_derivative(self.output)
         
         # Errore retropropagato all'hidden layer
@@ -36,10 +36,10 @@ class XORNetwork:
         hidden_delta = hidden_error * sigmoid_derivative(self.a1)
         
         # Aggiornamento pesi e bias
-        self.W1 += X.T.dot(hidden_delta) * learning_rate
-        self.b1 += np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
-        self.W2 += self.a1.T.dot(output_delta) * learning_rate
-        self.b2 += np.sum(output_delta, axis=0, keepdims=True) * learning_rate
+        self.W2 -= self.a1.T.dot(output_delta) * learning_rate
+        self.b2 -= np.sum(output_delta, axis=0, keepdims=True) * learning_rate
+        self.W1 -= X.T.dot(hidden_delta) * learning_rate
+        self.b1 -= np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
 
     def train(self, X, y, learning_rate):
         output = self.forward(X)
