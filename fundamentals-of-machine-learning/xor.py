@@ -36,6 +36,9 @@ class XORNetwork:
         hidden_error = output_delta @ self.W2.T
         hidden_delta = hidden_error * sigmoid_derivative(self.a1)
         
+        return hidden_delta, output_delta
+        
+    def update(self, X, learning_rate, output_delta, hidden_delta):
         # Aggiornamento pesi e bias
         self.W2 -= (self.a1.T @ output_delta) * learning_rate
         self.b2 -= np.sum(output_delta, axis=0, keepdims=True) * learning_rate
@@ -44,9 +47,11 @@ class XORNetwork:
 
     def train(self, X, y, learning_rate):
         output = self.forward(X)
-        self.backward(X, y, learning_rate)
+        hidden_delta, output_delta = self.backward(X, y, learning_rate)
+        self.update(X, learning_rate, output_delta, hidden_delta)
         loss = 0.5 * np.mean((y - output) ** 2)
         self.loss_history.append(loss)
+        
 
 # Visualizzazione dei risultati della rete
 def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
