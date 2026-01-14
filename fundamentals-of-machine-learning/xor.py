@@ -20,25 +20,26 @@ class XORNetwork:
 
     def forward(self, X):
         # Calcolo esplicito di tutti i layer della rete
-        self.z1 = np.dot(X, self.W1) + self.b1
+        self.z1 = X @ self.W1 + self.b1
         self.a1 = sigmoid(self.z1) 
-        self.z2 = np.dot(self.a1, self.W2) + self.b2
+        self.z2 = self.a1 @ self.W2 + self.b2
         self.output = sigmoid(self.z2)
         return self.output
 
     def backward(self, X, y, learning_rate):
+        # Il simbolo @ indica la moltiplicazione di matrici in numpy, è equivalente a np.dot()
         # Errore rispetto all'output
         output_error = self.output - y
         output_delta = output_error * sigmoid_derivative(self.output)
         
         # Errore retropropagato all'hidden layer
-        hidden_error = output_delta.dot(self.W2.T)
+        hidden_error = output_delta @ self.W2.T
         hidden_delta = hidden_error * sigmoid_derivative(self.a1)
         
         # Aggiornamento pesi e bias
-        self.W2 -= self.a1.T.dot(output_delta) * learning_rate
+        self.W2 -= (self.a1.T @ output_delta) * learning_rate
         self.b2 -= np.sum(output_delta, axis=0, keepdims=True) * learning_rate
-        self.W1 -= X.T.dot(hidden_delta) * learning_rate
+        self.W1 -= (X.T @ hidden_delta) * learning_rate
         self.b1 -= np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
 
     def train(self, X, y, learning_rate):
