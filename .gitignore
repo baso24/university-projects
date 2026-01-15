@@ -2,6 +2,8 @@
 assets/
 gan.generated/
 dcgan.generated/
+runs/
+yolov8n-seg.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
