@@ -43,7 +43,7 @@ class CelebADataset(Dataset):
     # root_dir: directory delle immagini
     # csv_file: file CSV con nomi immagini e attributi
     # transform: trasformazioni da applicare alle immagini
-    def __init__(self, root_dir, csv_file, transform=None):
+    def __init__(self, root_dir, csv_file, transform):
         self.root_dir = root_dir
         self.transform = transform
         self.attr_names = ['Male', 'Young', 'Blond_Hair', 'Smiling']
@@ -56,18 +56,14 @@ class CelebADataset(Dataset):
             header = next(reader)
             
             # trovo gli indici delle colonne degli attributi desiderati nel file csv
-            try:
-                attr_indices = [header.index(name) for name in self.attr_names]
-            except ValueError:
-                print(f"Errore: Colonne {self.attr_names} non trovate nell'header.")
-                raise
+            attr_indices = [header.index(name) for name in self.attr_names]
 
             for row in reader: # ogni row è fatta così: [img_name, attr1, attr2, ..., attr40]
                 img_name = row[0]
                 img_path = os.path.join(root_dir, img_name) # costruisco il path dell'immagine
                 if os.path.exists(img_path): # controllo che l'immagine esista nel dataset
-                    attributes = [float(row[i]) for i in attr_indices]
-                    self.data.append((img_name, attributes))
+                    attributes = [float(row[i]) for i in attr_indices] # prendo solo gli attributi che mi interessano
+                    self.data.append((img_name, attributes)) # salvo il nome dell'immagine e gli attributi
                     
         print(f"Immagini valide trovate: {len(self.data)}")
         
@@ -76,36 +72,30 @@ class CelebADataset(Dataset):
 
     # metodo che definisce cosa succede quando si richiede un elemento del dataset
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-            
         img_name, attributes = self.data[idx] # recupero nome immagine e attributi, da self.data che è: ['000001.jpg', [1.0, -1.0, 1.0, -1.0]]
         img_path = os.path.join(self.root_dir, img_name)
         image = Image.open(img_path)
-        
-        if self.transform:
-            image = self.transform(image) # applico le trasformazioni definite, l'immagine passa da PIL a Tensor
-            
+        image = self.transform(image) # applico le trasformazioni definite, l'immagine passa da PIL a Tensor
         return image, torch.tensor(attributes, dtype=torch.float32)
 
-# Inizializzazione dei pesi specifica per DCGAN (Normal distribution 0.0, 0.02)
+# Inizializzazione dei pesi specifica per DCGAN come viene detto nel paper 
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
+        nn.init.normal_(m.weight.data, 0.0, 0.02) #(Normal distribution con media 0 e varianza 0.02)
     elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
+        nn.init.normal_(m.weight.data, 1.0, 0.02) #(Normal distribution con media 0 e varianza 0.02)
+        nn.init.constant_(m.bias.data, 0) # Bias a 0
 
 class DCGANDiscriminator(nn.Module):
-    def __init__(self, n_classes=3):
+    def __init__(self, n_attr):
         super().__init__()
-        self.n_classes = n_classes
+        self.n_attr = n_attr
         
-        # L'input ha 3 (RGB) + n_classes canali (n_classes è il numero di attributi)
+        # L'input ha 3 (RGB) + n_attr canali (n_attr è il numero di attributi)
         self.network = nn.Sequential(
-            # in: (3 + n_classes) x 64 x 64
-            nn.Conv2d(3 + n_classes, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            # in: (3 + n_attr) x 64 x 64
+            nn.Conv2d(3 + n_attr, 64, kernel_size=4, stride=2, padding=1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
             # out: 64 x 32 x 32
 
@@ -132,12 +122,12 @@ class DCGANDiscriminator(nn.Module):
 
     def forward(self, x, labels):
         # x: [batch_size, 3, 64, 64]
-        # labels: [batch_size, n_classes]
+        # labels: [batch_size, n_attr]
         
         # Le etichette devono diventare un cubo di dimensione 4x1x1 da concatenare all'immagine
         # Questo cubo viene poi espanso a essere 4x64x64
         # Ogni pixel dell'immagine avrà queste label associate oltre ai suoi 3 canali RGB
-        labels = labels.view(labels.size(0), self.n_classes, 1, 1)
+        labels = labels.view(labels.size(0), self.n_attr, 1, 1)
         labels = labels.expand(-1, -1, x.size(2), x.size(3))
         
         # Concateniamo i 3 canali RGB con i canali delle label
@@ -182,14 +172,14 @@ class DCGANDiscriminator(nn.Module):
         return loss.item(), real_score, fake_score
 
 class DCGANGenerator(nn.Module):
-    def __init__(self, latent_size, n_classes=3):
+    def __init__(self, latent_size, n_attr):
         super().__init__()
         self.latent_size = latent_size
-        self.n_classes = n_classes
+        self.n_attr = n_attr
         
         self.network = nn.Sequential(
-            # input: (latent_size + n_classes) x 1 x 1
-            nn.ConvTranspose2d(latent_size + n_classes, 512, kernel_size=4, stride=1, padding=0, bias=False),
+            # input: (latent_size + n_attr) x 1 x 1
+            nn.ConvTranspose2d(latent_size + n_attr, 512, kernel_size=4, stride=1, padding=0, bias=False),
             nn.BatchNorm2d(512),
             nn.ReLU(True),
             # out: 512 x 4 x 4
@@ -216,10 +206,10 @@ class DCGANGenerator(nn.Module):
 
     def forward(self, x, labels):
         # x: [batch_size, latent_size, 1, 1]
-        # labels: [batch_size, n_classes]
+        # labels: [batch_size, n_attr]
         
         # Estendo le label a 4x1x1 per poterle concatenare al vettore di rumore
-        labels = labels.view(labels.size(0), self.n_classes, 1, 1)
+        labels = labels.view(labels.size(0), self.n_attr, 1, 1)
         # Concateno il rumore con le label
         x = torch.cat([x, labels], dim=1)
         return self.network(x)
@@ -246,14 +236,13 @@ class DCGANGenerator(nn.Module):
         return loss.item()
 
 class GANDiscriminator(nn.Module):
-    def __init__(self, n_classes=3):
+    def __init__(self, n_attr):
         super().__init__()
-        self.n_classes = n_classes
+        self.n_attr = n_attr
         self.img_flat_size = 3 * 64 * 64
         
-        
         self.network = nn.Sequential(
-            nn.Linear(self.img_flat_size + n_classes, 512),
+            nn.Linear(self.img_flat_size + n_attr, 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 256),
             nn.LeakyReLU(0.2, inplace=True),
@@ -264,7 +253,7 @@ class GANDiscriminator(nn.Module):
         """
         #Nuovo modello più complesso
         self.network = nn.Sequential(
-            nn.Linear(self.img_flat_size + n_classes, 1024),
+            nn.Linear(self.img_flat_size + n_attr, 1024),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.3),
             nn.Linear(1024, 512),
@@ -322,16 +311,15 @@ class GANDiscriminator(nn.Module):
         return loss.item(), real_score, fake_score
 
 class GANGenerator(nn.Module):
-    def __init__(self, latent_size, n_classes=3):
+    def __init__(self, latent_size, n_attr):
         super().__init__()
         self.latent_size = latent_size
-        self.n_classes = n_classes
+        self.n_attr = n_attr
         self.img_shape = (3, 64, 64)
         self.img_flat_size = 3 * 64 * 64
 
-        
         self.network = nn.Sequential(
-            nn.Linear(latent_size + n_classes, 256),
+            nn.Linear(latent_size + n_attr, 256),
             nn.ReLU(True),
             nn.Linear(256, 512),
             nn.ReLU(True),
@@ -344,7 +332,7 @@ class GANGenerator(nn.Module):
         """
         #Nuovo modello più complesso
         self.network = nn.Sequential(
-            nn.Linear(latent_size + n_classes, 512),
+            nn.Linear(latent_size + n_attr, 512),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(512, 1024),
             nn.BatchNorm1d(1024),
@@ -362,7 +350,7 @@ class GANGenerator(nn.Module):
 
     def forward(self, x, labels):
         # x: [batch_size, latent_size]
-        # labels: [batch_size, n_classes]
+        # labels: [batch_size, n_attr]
 
         # Concateno il latent con le label
         x = torch.cat([x, labels], dim=1)
@@ -533,7 +521,7 @@ if __name__ == '__main__':
     latent_size = 128
     image_size = 64
     batch_size = 128
-    n_classes = 4
+    n_attr = 4
     attr_names = ['Male', 'Young', 'Blond', 'Smiling']
     
     # Generariamo un'immagine per ogni combinazione possibile di attributi (2^4 = 16)
@@ -547,7 +535,7 @@ if __name__ == '__main__':
         T.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     full_dataset = CelebADataset(root_dir=IMG_DIR, csv_file=ATTR_CSV, transform=transform)
 
-    # Test purposes
+    # Debug
     if len(full_dataset) == 0:
         print("ERRORE: Nessuna immagine trovata. Verifica che il percorso IMG_DIR sia corretto.")
         exit()
@@ -558,14 +546,14 @@ if __name__ == '__main__':
     train_dataset = torch.utils.data.Subset(full_dataset, random_indices)
 
     # Vediamo la distribuzione delle classi nel subset creato
-    print("Analisi distribuzione classi nel subset...")
-    stats = torch.zeros(n_classes)
+    print("Analisi distribuzione classi nel subset:")
+    stats = torch.zeros(n_attr)
     total = len(train_dataset)
     subset_indices = train_dataset.indices
-    count_pos = [0] * n_classes
+    count_pos = [0] * n_attr
     for idx in subset_indices:
         _, attrs = train_dataset.dataset.data[idx] 
-        for i in range(n_classes):
+        for i in range(n_attr):
             if attrs[i] > 0:
                 count_pos[i] += 1
     print(f"Totale immagini subset: {total}")
@@ -576,17 +564,14 @@ if __name__ == '__main__':
     # 'num_workers' specifica il numero di subprocessi da usare per caricare le immagini dal disco alla RAM.
     train_dl = DataLoader(train_dataset, batch_size, shuffle=True, num_workers=2, pin_memory=(DEVICE.type == 'cuda'))
     
-    # Test purposes
-    print(f"Immagini caricate: {len(train_dataset)}")
-    
     if model_prefix == "gan":
-        discriminator = GANDiscriminator(n_classes=n_classes).to(DEVICE)
-        generator = GANGenerator(latent_size, n_classes=n_classes).to(DEVICE)
+        discriminator = GANDiscriminator(n_attr=n_attr).to(DEVICE)
+        generator = GANGenerator(latent_size, n_attr=n_attr).to(DEVICE)
         input_noise = torch.randn(generated_samples_count, latent_size, device=DEVICE)
     else:
-        discriminator = DCGANDiscriminator(n_classes=n_classes).to(DEVICE)
-        generator = DCGANGenerator(latent_size, n_classes=n_classes).to(DEVICE)
-        # Applicazione dell'inizializzazione dei pesi
+        discriminator = DCGANDiscriminator(n_attr=n_attr).to(DEVICE)
+        generator = DCGANGenerator(latent_size, n_attr=n_attr).to(DEVICE)
+        # Applicazione dell'inizializzazione dei pesi in caso di DCGAN
         discriminator.apply(weights_init)
         generator.apply(weights_init)
         input_noise = torch.randn(generated_samples_count, latent_size, 1, 1, device=DEVICE)
@@ -599,7 +584,7 @@ if __name__ == '__main__':
     permanent_dir = os.path.join(current_dir, f'{model_prefix}.{SUBSET_DIM}subset.{EPOCHS}epochs.{DISCRIMINATOR_LEARNING_RATE}lr.{GENERATOR_LEARNING_RATE}lr')
     os.makedirs(permanent_dir, exist_ok=True)
 
-    # Generiamo tutte le combinazioni possibili di attributi (2^4 = 16 combinazioni)
+    # Generiamo tutte le combinazioni possibili di attributi (16 combinazioni)
     labels_list = []
     for i in range(16):
         # Logica bitwise per creare combinazioni di -1 e 1
