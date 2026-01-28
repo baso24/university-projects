@@ -1,8 +1,26 @@
+"""
+Il progetto implementa una rete neurale che risolve il semplice prollema dello XOR.
+L'architettura della rete è composta da:
+    - 2 neuroni di input
+    - 1 hidden layer con 2 neuroni
+    - 1 neurone di output
+    
+Una volta che la rete è stata addestrata, viene visualizzato una dashboard interattiva che mostra:
+    - Lo spazio di input con la decision boundary della rete e le linee di separazione dei neuroni dell'hidden layer
+    - Lo spazio dell'hidden layer con la linea di separazione del neurone di output
+    - Le activation maps dei due neuroni dell'hidden layer
+    - L'andamento della loss function durante il training
+    
+Lo slider sotto i grafici permette di selezionare l'epoch e aggiornare i grafici per visualizzare come la rete evolve durante il training.
+
+Realizzato da Valentino Basili e Giovanni Paolo Maugeri.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 
-# Funzione di attivazione sigmoid e sua derivata
+# Funzione di attivazione sigmoid e derivata
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 def sigmoid_derivative(x):
@@ -19,42 +37,43 @@ class XORNetwork:
         self.loss_history = []
 
     def forward(self, X):
-        # Calcolo esplicito di tutti i layer della rete
-        self.z1 = X @ self.W1 + self.b1
+        # Calcolo esplicito di tutti i layer della rete (forward stage)
+        self.z1 = np.dot(X, self.W1) + self.b1
         self.a1 = sigmoid(self.z1) 
-        self.z2 = self.a1 @ self.W2 + self.b2
+        self.z2 = np.dot(self.a1, self.W2) + self.b2
         self.output = sigmoid(self.z2)
         return self.output
 
-    def backward(self, X, y, learning_rate):
-        # Il simbolo @ indica la moltiplicazione di matrici in numpy, è equivalente a np.dot()
+    def backward(self, y):
+        # Utilizziamo np.dot() per la moltiplicazione di matrici
         # Errore rispetto all'output
         output_error = self.output - y
         output_delta = output_error * sigmoid_derivative(self.output)
         
         # Errore retropropagato all'hidden layer
-        hidden_error = output_delta @ self.W2.T
+        hidden_error = np.dot(output_delta, self.W2.T)
         hidden_delta = hidden_error * sigmoid_derivative(self.a1)
         
         return hidden_delta, output_delta
         
     def update(self, X, learning_rate, output_delta, hidden_delta):
         # Aggiornamento pesi e bias
-        self.W2 -= (self.a1.T @ output_delta) * learning_rate
+        self.W2 -= np.dot(self.a1.T, output_delta) * learning_rate
         self.b2 -= np.sum(output_delta, axis=0, keepdims=True) * learning_rate
-        self.W1 -= (X.T @ hidden_delta) * learning_rate
+        self.W1 -= np.dot(X.T, hidden_delta) * learning_rate
         self.b1 -= np.sum(hidden_delta, axis=0, keepdims=True) * learning_rate
 
     def train(self, X, y, learning_rate):
+        # Esecuzione di un pass completo di training: forward, backward, update
         output = self.forward(X)
-        hidden_delta, output_delta = self.backward(X, y, learning_rate)
+        hidden_delta, output_delta = self.backward(y)
         self.update(X, learning_rate, output_delta, hidden_delta)
         loss = 0.5 * np.mean((y - output) ** 2)
         self.loss_history.append(loss)
         
 
 # Visualizzazione dei risultati della rete
-def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
+def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, ax_loss, loss_history, X, y):
     # Creazione griglia di punti per visualizzare lo sfondo colorato (decision boundary)
     # np.linspace genera 100 numeri equispaziati tra -5 e 5.
     # np.meshgrid crea due matrici 2D (100x100): 'xx' per le coordinate x e 'yy' per le y.
@@ -88,11 +107,9 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
     for i in range(2): 
         w_x, w_y = net.W1[0, i], net.W1[1, i]
         b = net.b1[0, i]
-        # Evita divisione per zero
-        if abs(w_y) > 0.001: 
-            # Calcolo e plotto y per la linea di decisione
-            y_line = -(w_x * x_line + b) / w_y
-            ax_surface.plot(x_line, y_line, color=colors[i], linestyle='--', label=f'Hidden N{i+1}')
+        # Calcolo e plotto y per la linea di decisione
+        y_line = -(w_x * x_line + b) / w_y
+        ax_surface.plot(x_line, y_line, color=colors[i], linestyle='--', label=f'H{i+1} Boundary')
     ax_surface.legend(loc='lower right', fontsize='x-small')
 
     # -- Hidden layer --
@@ -115,11 +132,9 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
     v1, v2 = net.W2[0, 0], net.W2[1, 0]
     c = net.b2[0, 0]
     h_line = np.linspace(-5, 5, 100)
-     # Evita divisione per zero
-    if abs(v2) > 0.001:
-        # Calcolo e plotto y per la linea di decisione
-        v_line = -(v1 * h_line + c) / v2
-        ax_hidden.plot(h_line, v_line, color='black', linestyle='--', linewidth=2, label='Output Sep.')
+    # Calcolo e plotto y per la linea di decisione
+    v_line = -(v1 * h_line + c) / v2
+    ax_hidden.plot(h_line, v_line, color='black', linestyle='--', linewidth=2, label='Output Boundary')
     ax_hidden.legend(loc='lower right', fontsize='x-small')
 
     # -- Activation maps dei neuroni dell'hidden layer --
@@ -143,6 +158,17 @@ def plot_results(net, epoch, ax_surface, ax_hidden, ax_act1, ax_act2, X, y):
     ax_act2.set_xlim(-0.6, 1.6)
     ax_act2.set_ylim(-0.6, 1.6)
 
+    # -- Loss Function --
+    ax_loss.plot(loss_history, label='Training Loss')
+    # Marker corrente
+    curr_loss_val = loss_history[epoch]
+    ax_loss.scatter(epoch, curr_loss_val, color='red', s=50, zorder=5, label='Current Epoch')
+    ax_loss.set_title("Loss Function Evolution", fontsize=10)
+    ax_loss.set_xlabel("Epochs", fontsize=9)
+    ax_loss.set_ylabel("MSE Loss", fontsize=9)
+    ax_loss.legend(fontsize=8)
+    ax_loss.grid(True)
+
 # Funzione di aggiornamento dei grafici allo spostamento dello slider
 def update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y):
     # Prendo valore indice dello slider (numero epoch)
@@ -159,26 +185,15 @@ def update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y
     # Pulisci e ridisegna con il nuovo stato della rete
     # Quindi con i pesi e i bias dell'epoch selezionata
     ax1.clear(); ax2.clear(); ax3.clear(); ax4.clear(); ax_loss.clear()
-    plot_results(net, state['epoch'], ax1, ax2, ax3, ax4, X, y)
-    
-    # Plot Loss
     full_loss = net_history[-1]['loss']
-    ax_loss.plot(full_loss, label='Training Loss')
-    # Marker corrente
-    curr_loss_val = full_loss[state['epoch']]
-    ax_loss.scatter(state['epoch'], curr_loss_val, color='red', s=50, zorder=5, label='Current Epoch')
-    ax_loss.set_title("Risk Function Evolution", fontsize=10)
-    ax_loss.set_xlabel("Epochs", fontsize=9)
-    ax_loss.set_ylabel("MSE Loss", fontsize=9)
-    ax_loss.legend(fontsize=8)
-    ax_loss.grid(True)
+    plot_results(net, state['epoch'], ax1, ax2, ax3, ax4, ax_loss, full_loss, X, y)
     
     fig.canvas.draw_idle()
 
 if __name__ == "__main__":    
     
     # Parametri rete e training
-    # Se si vuole aumentare il numero di epochs vanno ridefiniti anche gli snapshots...
+    # Se si vuole aumentare il numero di epochs vanno ridefiniti anche gli snapshots
     LEARNING_RATE = 0.5 
     EPOCHS = 2000      
     SNAPSHOTS = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1250, 1500, 1750, 2000] 
@@ -201,6 +216,7 @@ if __name__ == "__main__":
 
     # Creazione figura e layout
     fig = plt.figure(figsize=(16, 8))
+    # Aggiustamenti del layout sullo schermo per far entrare tutto
     plt.subplots_adjust(left=0.077, right=0.95, bottom=0.137, top=0.877, hspace=0.336, wspace=0.423)
     fig.suptitle("XOR Network Training Dashboard", fontsize=14, fontweight='bold')
     fig.text(0.5, 0.94, "Legend: Red Points = Class 0 (Target 0), Blue Points = Class 1 (Target 1) | Activation Maps: White=0 (Inactive), Black=1 (Active)", 
@@ -217,7 +233,7 @@ if __name__ == "__main__":
     # Slider
     ax_slider = plt.axes([0.25, 0.05, 0.5, 0.03])
     slider = Slider(ax_slider, 'Epoch', 0, len(net_history)-1, valinit=0, valstep=1)
-    # Funzione di callback per lo slider che richiama update (con il val = valore corrente nello slider)
+    # Funzione di callback in ascolto sullo slider che richiama update (con il val = valore corrente nello slider)
     slider.on_changed(lambda val: update(val, slider, net_history, net, ax1, ax2, ax3, ax4, ax_loss, fig, X, y))
 
     # Plot iniziale con val = 0

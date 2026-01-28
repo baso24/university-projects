@@ -25,18 +25,6 @@ def get_device():
         return torch.device('mps')
     else:
         return torch.device('cpu')
-    
-# Mostra un batch di immagini generate dal generatore in una griglia 4x4
-def show_images(images, nmax=16):
-  fig, ax = plt.subplots(figsize=(8,8))
-  ax.set_xticks([]); ax.set_yticks([])
-  ax.imshow(make_grid(denorm(images.detach()[:nmax]), nrow=4).permute(1, 2, 0))
-
-# Mostra un batch di immagini dal dataloader
-def show_batch(dl, nmax=16):
-  for images, _ in dl:
-    show_images(images, nmax)
-    break
 
 # Dataset personalizzato per leggere immagini e attributi dal CSV
 class CelebADataset(Dataset):
@@ -84,7 +72,7 @@ def weights_init(m):
     if classname.find('Conv') != -1:
         nn.init.normal_(m.weight.data, 0.0, 0.02) #(Normal distribution con media 0 e varianza 0.02)
     elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02) #(Normal distribution con media 0 e varianza 0.02)
+        nn.init.normal_(m.weight.data, 1.0, 0.02) #(Normal distribution con media 1 e varianza 0.02)
         nn.init.constant_(m.bias.data, 0) # Bias a 0
 
 class DCGANDiscriminator(nn.Module):

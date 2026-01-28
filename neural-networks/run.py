@@ -110,7 +110,7 @@ if __name__ == '__main__':
     root = ThemedTk(theme="arc")
     root.title("GAN and DCGAN: Human faces generator")
 
-    # Configurazione stile per il bottone (ttk richiede uno Style per cambiare font)
+    # Configurazione stile per il bottone 
     style = ttk.Style()
     style.configure("Big.TButton", font=("Arial", 14))
 
