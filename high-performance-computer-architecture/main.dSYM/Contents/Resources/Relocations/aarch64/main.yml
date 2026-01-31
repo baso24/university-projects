@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/basi24/Documents/university-projects/high-performance-computer-architecture/main'
+relocations:     []
+...

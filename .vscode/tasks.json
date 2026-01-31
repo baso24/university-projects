@@ -1,0 +1,43 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: clang++ build with OpenMP",
+            "command": "/usr/bin/clang++",
+            "args": [
+                "-std=c++17",
+                "-fcolor-diagnostics",
+                "-fansi-escape-codes",
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}",
+                
+                // Flag specifici per OpenMP su macOS
+                "-Xpreprocessor",
+                "-fopenmp",
+                
+                // Include path
+                "-I/opt/homebrew/opt/libomp/include",
+                
+                // Library path
+                "-L/opt/homebrew/opt/libomp/lib",
+                
+                // Linker flag
+                "-lomp"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Compilatore Clang++ per C++ con OpenMP"
+        }
+    ]
+}
