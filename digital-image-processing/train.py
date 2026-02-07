@@ -3,7 +3,6 @@ Progetto: Pose Estimation and Fall Detection - Training
 Autore: Valentino Basili, Giovanni Paolo Maugeri
 """
 
-import os
 import json
 import base64
 import zlib
@@ -14,49 +13,32 @@ import torch
 from pathlib import Path
 from ultralytics import YOLO
 import cv2
-import matplotlib.pyplot as plt
-import albumentations as A
+import shutil
 
 class BodyPartDatasetPreprocessor:
-    def __init__(self, dataset_path, output_path, subset_ratio=1.0):
+    def __init__(self, dataset_path, output_path, subset_ratio):
         self.dataset_path = Path(dataset_path)
         self.output_path = Path(output_path)
         self.subset_ratio = subset_ratio
-        
-        # Mapping classi (Semplificato per il tuo task)
-        # 0: Background, 1: Testa, 2: Braccia, 3: Torso, 4: Gambe, 5: Piedi
         self.target_classes = ['testa', 'braccia', 'torso', 'gambe', 'piedi']
         self.debug_counter = 0
 
     def get_image_paths(self):
-        """
-        Recupera le immagini specificamente dalla cartella 'imm'
-        """
-        
-        # Cerca cartella immagini (imm o img o images)
-        img_dir = None
-        for d in ['imm', 'img', 'images']:
-            if (self.dataset_path / d).exists():
-                img_dir = self.dataset_path / d
-                break
+        img_dir = self.dataset_path / "img"
         
         if img_dir is None:
-            print(f"ERRORE CRITICO: Nessuna cartella immagini (imm/img) trovata in {self.dataset_path}!")
+            print(f"ERRORE: Nessuna cartella img trovata in {self.dataset_path}!")
             return []
 
-        # Cerca estensioni comuni
-        exts = ['*.jpg', '*.jpeg', '*.png']
+        ext = ['*.jpg']
         all_images = []
-        for ext in exts:
-            found = list(img_dir.glob(ext))
-            all_images.extend(found)
+        for e in ext:
+            all_images.extend(img_dir.glob(e))
             
         print(f"Trovate {len(all_images)} immagini in {img_dir.name}")
         
-        # Subset logic
         if self.subset_ratio < 1.0:
             subset_size = int(len(all_images) * self.subset_ratio)
-            # Shuffle deterministico per riproducibilità se serve, altrimenti random
             random.shuffle(all_images)
             all_images = all_images[:subset_size]
             print(f"Utilizzo un subset del {self.subset_ratio*100}%: {len(all_images)} immagini")
@@ -64,24 +46,20 @@ class BodyPartDatasetPreprocessor:
         return all_images
 
     def parse_dataset_ninja_json(self, json_path, width, height):
-        """
-        Parser specifico per il formato DatasetNinja / Supervisely
-        """
         try:
             with open(json_path, 'r') as f:
                 data = json.load(f)
             
             yolo_annotations = []
-            
-            # DatasetNinja di solito usa 'objects' o 'shapes'
-            objects = data.get('objects', data.get('shapes', []))
+
+            objects = data.get('objects')
             
             for obj in objects:
                 # Recupera la label
                 label = obj.get('classTitle', obj.get('label', '')).lower()
                 polygons = []
 
-                # --- GESTIONE BITMAP (Supervisely/DatasetNinja) ---
+                # Gestione bitmap
                 if 'bitmap' in obj and 'data' in obj['bitmap']:
                     try:
                         bitmap_data = obj['bitmap']['data']
@@ -109,12 +87,13 @@ class BodyPartDatasetPreprocessor:
                                 pts[:, 0] += origin[0]
                                 pts[:, 1] += origin[1]
                                 polygons.append(pts.tolist())
+
                     except Exception as e:
                         if self.debug_counter < 10:
                             print(f"Errore bitmap {label}: {e}")
                             self.debug_counter += 1
 
-                # --- GESTIONE POLIGONI (LabelMe/Standard) ---
+                # Gestione poligoni
                 elif 'points' in obj:
                     if isinstance(obj['points'], dict) and 'exterior' in obj['points']:
                         polygons.append(obj['points']['exterior'])
@@ -125,7 +104,7 @@ class BodyPartDatasetPreprocessor:
                     # Skip silenzioso se non troviamo geometria valida
                     continue
 
-                # Mapping Classi (Logica custom basata sui nomi CIHP)
+                # Mapping Classi
                 class_id = -1
                 if any(x in label for x in ['hat', 'hair', 'face', 'sunglass', 'scarf']): class_id = 0 # Testa
                 elif any(x in label for x in ['arm', 'glove', 'hand']): class_id = 1 # Braccia
@@ -135,10 +114,9 @@ class BodyPartDatasetPreprocessor:
 
                 if class_id != -1:
                     for points in polygons:
-                        # Normalizzazione YOLO (x_norm y_norm)
+                        # Normalizzazione YOLO
                         flat_points = []
                         for pt in points:
-                            # Clamp points to image dimensions to avoid errors
                             x = min(max(pt[0], 0), width)
                             y = min(max(pt[1], 0), height)
                             flat_points.extend([x / width, y / height])
@@ -233,7 +211,7 @@ class YOLOBodySegmentationTrainer:
             self.device = 'cpu'
         print(f"Device: {self.device}")
 
-    def train(self, epochs, batch, imgsz, project_dir='runs/segment'):
+    def train(self, epochs, batch, imgsz, project_dir):
         self.model.train(
             data=self.dataset_yaml,
             epochs=epochs,
@@ -256,10 +234,10 @@ class YOLOBodySegmentationTrainer:
 if __name__ == "__main__":
     
     # --- CONFIGURAZIONE TRAINING ---
-    SUBSET_RATIO = 0.05  # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 2           # Numero di epoche
-    BATCH_SIZE = 32     # Dimensione batch
-    IMG_SIZE = 128       # Dimensione immagini
+    SUBSET_RATIO = 0.2  # Percentuale dataset da usare (0.05 = 5%)
+    EPOCHS = 10           # Numero di epoche
+    BATCH_SIZE = 64     # Dimensione batch
+    IMG_SIZE = 256       # Dimensione immagini
 
     # 1. DEFINIZIONE PATH CORRETTA
     # __file__ è dentro digital-image-processing/train.py
@@ -284,6 +262,11 @@ if __name__ == "__main__":
         exit()
 
     # 2. PREPROCESSING
+    # Pulizia preventiva per garantire che il subset sia esattamente quello richiesto (nuovo shuffle)
+    if PROCESSED_PATH.exists():
+        print(f"Rimozione vecchia cartella processed per generare nuovo subset...")
+        shutil.rmtree(PROCESSED_PATH)
+
     preprocessor = BodyPartDatasetPreprocessor(RAW_DATA_PATH, PROCESSED_PATH, subset_ratio=SUBSET_RATIO)
     preprocessor.process_dataset()
 
@@ -316,7 +299,7 @@ if __name__ == "__main__":
     # Avvio training
     print(f"\nDataset pronto con {len(train_files)} immagini di training.")
     print("\nAvvio Training YOLO...")
-    path_to_best_model = 'runs/segment/body_parts_v2/weights/best.pt'
+    path_to_best_model = 'yolov8n-seg.pt'
     trainer = YOLOBodySegmentationTrainer(str(yaml_path), path_to_best_model)
     
     # Usa path assoluto per evitare duplicazioni (es. runs/segment/runs/segment)
