@@ -1,6 +1,6 @@
 """
-Progetto: Pose Estimation and Fall Detection - Training Pipeline
-Autore: Student - AI and Automation Engineering
+Progetto: Pose Estimation and Fall Detection - Training
+Autore: Valentino Basili, Giovanni Paolo Maugeri
 """
 
 import os
@@ -222,7 +222,7 @@ class BodyPartDatasetPreprocessor:
                     f.write('\n'.join(annotations))
 
 class YOLOBodySegmentationTrainer:
-    def __init__(self, dataset_yaml, model_name='yolov8n-seg.pt'):
+    def __init__(self, dataset_yaml, model_name):
         self.dataset_yaml = dataset_yaml
         self.model = YOLO(model_name)
         if torch.cuda.is_available():
@@ -233,7 +233,7 @@ class YOLOBodySegmentationTrainer:
             self.device = 'cpu'
         print(f"Device: {self.device}")
 
-    def train(self, epochs=50, batch=16, imgsz=640, project_dir='runs/segment'):
+    def train(self, epochs, batch, imgsz, project_dir='runs/segment'):
         self.model.train(
             data=self.dataset_yaml,
             epochs=epochs,
@@ -241,10 +241,13 @@ class YOLOBodySegmentationTrainer:
             imgsz=imgsz,
             device=self.device,
             project=project_dir,
-            name='body_parts_v1',
-            exist_ok=False,
+            name='body_parts_v3',
+            exist_ok=True,
             val=True,
-            workers=4
+            workers=0,
+            conf=0.25,
+            max_det=100,
+            plots=True
         )
 
 # ============================================================================
@@ -254,9 +257,9 @@ if __name__ == "__main__":
     
     # --- CONFIGURAZIONE TRAINING ---
     SUBSET_RATIO = 0.05  # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 1           # Numero di epoche
-    BATCH_SIZE = 32      # Dimensione batch
-    IMG_SIZE = 320       # Dimensione immagini
+    EPOCHS = 2           # Numero di epoche
+    BATCH_SIZE = 32     # Dimensione batch
+    IMG_SIZE = 128       # Dimensione immagini
 
     # 1. DEFINIZIONE PATH CORRETTA
     # __file__ è dentro digital-image-processing/train.py
@@ -265,7 +268,7 @@ if __name__ == "__main__":
     # PROJECT_ROOT è la cartella che contiene sia 'digital-image-processing' che 'assets'
     PROJECT_ROOT = CURRENT_SCRIPT_DIR.parent
     
-    # Costruiamo il path come descritto da te
+    # Costruiamo il path
     RAW_DATA_PATH = PROJECT_ROOT / "assets" / "cihp-DatasetNinja" / "training"
     PROCESSED_PATH = PROJECT_ROOT / "assets" / "cihp-DatasetNinja" / "processed"
 
@@ -313,7 +316,8 @@ if __name__ == "__main__":
     # Avvio training
     print(f"\nDataset pronto con {len(train_files)} immagini di training.")
     print("\nAvvio Training YOLO...")
-    trainer = YOLOBodySegmentationTrainer(str(yaml_path), 'yolov8n-seg.pt')
+    path_to_best_model = 'runs/segment/body_parts_v2/weights/best.pt'
+    trainer = YOLOBodySegmentationTrainer(str(yaml_path), path_to_best_model)
     
     # Usa path assoluto per evitare duplicazioni (es. runs/segment/runs/segment)
     runs_path = PROJECT_ROOT / 'runs' / 'segment'

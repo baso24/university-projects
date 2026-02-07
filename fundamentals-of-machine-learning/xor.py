@@ -39,13 +39,12 @@ class XORNetwork:
     def forward(self, X):
         # Calcolo esplicito di tutti i layer della rete (forward stage)
         self.z1 = np.dot(X, self.W1) + self.b1
-        self.a1 = sigmoid(self.z1) 
+        self.a1 = sigmoid(self.z1)
         self.z2 = np.dot(self.a1, self.W2) + self.b2
         self.output = sigmoid(self.z2)
         return self.output
 
     def backward(self, y):
-        # Utilizziamo np.dot() per la moltiplicazione di matrici
         # Errore rispetto all'output
         output_error = self.output - y
         output_delta = output_error * sigmoid_derivative(self.output)
