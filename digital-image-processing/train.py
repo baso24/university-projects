@@ -241,7 +241,7 @@ class YOLOBodySegmentationTrainer:
             imgsz=imgsz,
             device=self.device,
             project=project_dir,
-            name='body_parts_v3',
+            name='body_parts_v4',
             exist_ok=True,
             val=True,
             workers=0,
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     
     # --- CONFIGURAZIONE TRAINING ---
     SUBSET_RATIO = 0.05  # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 2           # Numero di epoche
+    EPOCHS = 1           # Numero di epoche
     BATCH_SIZE = 32     # Dimensione batch
     IMG_SIZE = 128       # Dimensione immagini
 
