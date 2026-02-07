@@ -219,7 +219,7 @@ class YOLOBodySegmentationTrainer:
             imgsz=imgsz,
             device=self.device,
             project=project_dir,
-            name='body_parts_v3',
+            name='body_parts_v4',
             exist_ok=True,
             val=True,
             workers=0,
