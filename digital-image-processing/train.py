@@ -219,8 +219,8 @@ class YOLOBodySegmentationTrainer:
             imgsz=imgsz,
             device=self.device,
             project=project_dir,
-            name='body_parts_v4',
-            exist_ok=True,
+            name='body_parts',
+            exist_ok=False,
             val=True,
             workers=0,
             conf=0.25,
@@ -234,7 +234,7 @@ class YOLOBodySegmentationTrainer:
 if __name__ == "__main__":
     
     # --- CONFIGURAZIONE TRAINING ---
-    SUBSET_RATIO = 0.2  # Percentuale dataset da usare (0.05 = 5%)
+    SUBSET_RATIO = 0.5  # Percentuale dataset da usare (0.05 = 5%)
     EPOCHS = 10           # Numero di epoche
     BATCH_SIZE = 64     # Dimensione batch
     IMG_SIZE = 256       # Dimensione immagini
@@ -298,12 +298,25 @@ if __name__ == "__main__":
 
     # Avvio training
     print(f"\nDataset pronto con {len(train_files)} immagini di training.")
-    print("\nAvvio Training YOLO...")
+    
+    runs_path = PROJECT_ROOT / 'runs' / 'segment'
     path_to_best_model = 'yolov8n-seg.pt'
+
+    # Cerca l'ultimo modello best.pt disponibile nelle run precedenti
+    if runs_path.exists():
+        # Ottieni sottocartelle ordinate per data di modifica (più recenti prima)
+        subdirs = sorted([d for d in runs_path.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
+        for d in subdirs:
+            candidate = d / 'weights' / 'best.pt'
+            if candidate.exists():
+                path_to_best_model = str(candidate)
+                print(f"Trovato modello precedente da cui ripartire: {path_to_best_model}")
+                break
+
+    print("\nAvvio Training YOLO...")
     trainer = YOLOBodySegmentationTrainer(str(yaml_path), path_to_best_model)
     
     # Usa path assoluto per evitare duplicazioni (es. runs/segment/runs/segment)
-    runs_path = PROJECT_ROOT / 'runs' / 'segment'
     trainer.train(epochs=EPOCHS, batch=BATCH_SIZE, imgsz=IMG_SIZE, project_dir=str(runs_path))
 
     print(f"\nTraining completato! Controlla la cartella '{runs_path}' per i risultati e il modello (weights/best.pt).")
