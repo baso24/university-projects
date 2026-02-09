@@ -205,8 +205,8 @@ class YOLOBodySegmentationTrainer:
         self.model = YOLO(model_name)
         if torch.cuda.is_available():
             self.device = 'cuda'
-        elif torch.backends.mps.is_available():
-            self.device = 'mps'
+        #elif torch.backends.mps.is_available():
+            #self.device = 'mps'
         else:
             self.device = 'cpu'
         print(f"Device: {self.device}")
