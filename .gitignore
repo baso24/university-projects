@@ -3,7 +3,6 @@ assets/
 gan.generated/
 dcgan.generated/
 yolov8n-seg.pt
-runs/segment/**/weights
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
