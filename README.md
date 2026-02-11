@@ -4,7 +4,7 @@
 
 <h3>Digital Image Processing</h3>
 <p><b>Title:</b> Pose Estimation and Fall Detection</p>
-<p><b>Description: </b>to be specified...</p>
+<p><b>Description: </b>Implementation of a training of Yolo-seg network only for certain parts of the human body (head, torso, arms, legs and feet) and study of their mutual positions to understand whether there has been a fall or not.</p>
 <br>
 
 
