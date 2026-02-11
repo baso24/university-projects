@@ -21,7 +21,6 @@ class BodyPartDatasetPreprocessor:
         self.output_path = Path(output_path)
         self.subset_ratio = subset_ratio
         self.target_classes = ['testa', 'braccia', 'torso', 'gambe', 'piedi']
-        self.debug_counter = 0
 
     def get_image_paths(self):
         img_dir = self.dataset_path / "img"
@@ -30,10 +29,8 @@ class BodyPartDatasetPreprocessor:
             print(f"ERRORE: Nessuna cartella img trovata in {self.dataset_path}!")
             return []
 
-        ext = ['*.jpg']
-        all_images = []
-        for e in ext:
-            all_images.extend(img_dir.glob(e))
+        ext = '*.jpg'
+        all_images = list(img_dir.glob(ext))
             
         print(f"Trovate {len(all_images)} immagini in {img_dir.name}")
         
@@ -89,9 +86,7 @@ class BodyPartDatasetPreprocessor:
                                 polygons.append(pts.tolist())
 
                     except Exception as e:
-                        if self.debug_counter < 10:
-                            print(f"Errore bitmap {label}: {e}")
-                            self.debug_counter += 1
+                        print(f"Errore bitmap {label}: {e}")
 
                 # Gestione poligoni
                 elif 'points' in obj:
@@ -124,10 +119,6 @@ class BodyPartDatasetPreprocessor:
                         if len(flat_points) >= 6:
                             segment_str = f"{class_id} " + " ".join(f"{p:.6f}" for p in flat_points)
                             yolo_annotations.append(segment_str)
-                else:
-                    if self.debug_counter < 20:
-                        print(f"Label ignorata: '{label}' (File: {json_path.name})")
-                        self.debug_counter += 1
             
             return yolo_annotations
 
@@ -135,7 +126,7 @@ class BodyPartDatasetPreprocessor:
             print(f"Errore lettura JSON {json_path.name}: {e}")
             return []
 
-    def process_dataset(self, train_split=0.8):
+    def process_dataset(self, train_split): 
         print("\nInizio pre-processing...")
         
         # Setup directories
@@ -152,7 +143,7 @@ class BodyPartDatasetPreprocessor:
         if not images:
             return
 
-        # Split
+        # Splitting train/val
         random.shuffle(images)
         split_idx = int(len(images) * train_split)
         train_imgs = images[:split_idx]
@@ -167,22 +158,13 @@ class BodyPartDatasetPreprocessor:
         for idx, img_path in enumerate(image_list):
             if idx % 50 == 0: print(f"   {idx}/{len(image_list)}...", end='\r')
             
-            # 1. Carica Immagine
+            # Carica Immagine
             img = cv2.imread(str(img_path))
-            if img is None: continue
             h, w = img.shape[:2]
 
-            # 2. Trova Annotazione JSON
+            # Trova Annotazione JSON
             # STRUTTURA: training/imm/foto.jpg -> training/ann/foto.jpg.json
             json_path = self.dataset_path / 'ann' / f"{img_path.name}.json"
-            
-            if not json_path.exists():
-                # Fallback: prova senza .jpg nel nome json se il primo fallisce
-                json_path = self.dataset_path / 'ann' / f"{img_path.stem}.json"
-            
-            if not json_path.exists():
-                if idx < 5: print(f"JSON non trovato: {json_path}")
-                continue
 
             annotations = []
             if json_path.exists():
@@ -190,7 +172,6 @@ class BodyPartDatasetPreprocessor:
                 if not annotations and idx < 5:
                     print(f"JSON vuoto o classi non riconosciute per: {img_path.name}")
             
-            # 3. Salva solo se ci sono annotazioni o se vogliamo anche negativi (qui filtro)
             if annotations:
                 # Salva Immagine
                 cv2.imwrite(str(img_out / img_path.name), img)
@@ -205,11 +186,11 @@ class YOLOBodySegmentationTrainer:
         self.model = YOLO(model_name)
         if torch.cuda.is_available():
             self.device = 'cuda'
-        #elif torch.backends.mps.is_available():
-            #self.device = 'mps'
+        elif torch.backends.mps.is_available():
+            self.device = 'mps'
         else:
             self.device = 'cpu'
-        print(f"Device: {self.device}")
+        print(f"Device utilizzato: {self.device}")
 
     def train(self, epochs, batch, imgsz, project_dir):
         self.model.train(
@@ -228,49 +209,44 @@ class YOLOBodySegmentationTrainer:
             plots=True
         )
 
-# ============================================================================
-# MAIN
-# ============================================================================
+# ========================================== main ==========================================
 if __name__ == "__main__":
     
-    # --- CONFIGURAZIONE TRAINING ---
-    SUBSET_RATIO = 0.5  # Percentuale dataset da usare (0.05 = 5%)
+    # Configurazione training
+    SUBSET_RATIO = 0.5    # Percentuale dataset da usare (0.05 = 5%)
     EPOCHS = 10           # Numero di epoche
-    BATCH_SIZE = 64     # Dimensione batch
-    IMG_SIZE = 256       # Dimensione immagini
+    BATCH_SIZE = 64       # Dimensione batch
+    IMG_SIZE = 256        # Dimensione immagini
 
-    # 1. DEFINIZIONE PATH CORRETTA
-    # __file__ è dentro digital-image-processing/train.py
+    # Parent directory dello script corrente
     CURRENT_SCRIPT_DIR = Path(__file__).resolve().parent 
     
-    # PROJECT_ROOT è la cartella che contiene sia 'digital-image-processing' che 'assets'
+    # Project root, cioè cartella che contiene il parent dello script e assets
     PROJECT_ROOT = CURRENT_SCRIPT_DIR.parent
     
-    # Costruiamo il path
+    # Costruisco i path completi per input e output delle immagini
     RAW_DATA_PATH = PROJECT_ROOT / "assets" / "cihp-DatasetNinja" / "training"
     PROCESSED_PATH = PROJECT_ROOT / "assets" / "cihp-DatasetNinja" / "processed"
 
     print("="*50)
+    print(f"Current Script Dir: {CURRENT_SCRIPT_DIR}")
     print(f"Project Root: {PROJECT_ROOT}")
     print(f"Input Data:   {RAW_DATA_PATH}")
     print(f"Output Data:  {PROCESSED_PATH}")
     print("="*50)
 
-    # Verifica esistenza path prima di partire
-    if not RAW_DATA_PATH.exists():
-        print("ERRORE: Il percorso Input Data non esiste. Controlla i nomi delle cartelle.")
-        exit()
-
-    # 2. PREPROCESSING
-    # Pulizia preventiva per garantire che il subset sia esattamente quello richiesto (nuovo shuffle)
+    # Preprocessing dataset, se la cartella già esiste la rimuovo per evitare di mescolare vecchi dati con nuovi
     if PROCESSED_PATH.exists():
         print(f"Rimozione vecchia cartella processed per generare nuovo subset...")
         shutil.rmtree(PROCESSED_PATH)
 
+    # Creo il preprocessor che si occupa di processare le immagini e le annotazioni
+    # Devono essere processate per essere compatibili con il formato YOLO
     preprocessor = BodyPartDatasetPreprocessor(RAW_DATA_PATH, PROCESSED_PATH, subset_ratio=SUBSET_RATIO)
-    preprocessor.process_dataset()
+    train_split = 0.8  # 80% train, 20% val
+    preprocessor.process_dataset(train_split=train_split)
 
-    # 3. CONFIGURAZIONE YAML PER YOLO
+    # Yaml per yolo
     yaml_content = {
         'path': str(PROCESSED_PATH.absolute()),
         'train': 'images/train',
@@ -289,16 +265,14 @@ if __name__ == "__main__":
         yaml.dump(yaml_content, f, sort_keys=False)
     print(f"\nDataset YAML creato: {yaml_path}")
 
-    # 4. TRAINING
-    # Verifica che ci siano dati processati
+    # Verifico che ci siano immagini processate pronte per il training
     train_files = list((PROCESSED_PATH / 'images' / 'train').glob('*'))
     if not train_files:
         print("\nERRORE: Nessuna immagine è stata salvata nella cartella processed.")
         exit()
-
-    # Avvio training
     print(f"\nDataset pronto con {len(train_files)} immagini di training.")
     
+    # Path al modello da cui partire
     runs_path = PROJECT_ROOT / 'runs' / 'segment'
     path_to_best_model = 'yolov8n-seg.pt'
 
@@ -313,10 +287,9 @@ if __name__ == "__main__":
                 print(f"Trovato modello precedente da cui ripartire: {path_to_best_model}")
                 break
 
+    # Avvio training
     print("\nAvvio Training YOLO...")
     trainer = YOLOBodySegmentationTrainer(str(yaml_path), path_to_best_model)
-    
-    # Usa path assoluto per evitare duplicazioni (es. runs/segment/runs/segment)
     trainer.train(epochs=EPOCHS, batch=BATCH_SIZE, imgsz=IMG_SIZE, project_dir=str(runs_path))
 
-    print(f"\nTraining completato! Controlla la cartella '{runs_path}' per i risultati e il modello (weights/best.pt).")
+    print(f"\nTraining completato! Controlla la cartella '{runs_path}' per i risultati e il modello.")
