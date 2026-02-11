@@ -179,7 +179,7 @@ def show_segmentation_analysis(result, title):
 
 if __name__ == "__main__":
     
-    MODEL_PATH = 'runs/segment/body_parts4/weights/best.pt' 
+    MODEL_PATH = 'runs/segment/body_parts6/weights/best.pt' 
     
     # Path per il test random
     VAL_IMAGES_PATH = 'assets/cihp-DatasetNinja/processed/images/val'
