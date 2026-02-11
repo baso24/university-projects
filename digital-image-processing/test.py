@@ -75,7 +75,8 @@ def show_result(result, title):
     # BGR -> RGB per Matplotlib
     annotated_frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
 
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(12, 6))
+
     plt.imshow(annotated_frame_rgb)
     plt.axis('off')
     plt.title(title)
@@ -122,6 +123,8 @@ def show_segmentation_analysis(result, title):
     # Calcolo centroidi unici per classe (media pesata)
     final_centroids = {}
     for cid, m in class_moments.items():
+        if cid == 1: # Skip braccia (nessuna distinzione dx/sx)
+            continue
         if m['m00'] != 0:
             cX = int(m['m10'] / m['m00'])
             cY = int(m['m01'] / m['m00'])
@@ -134,7 +137,6 @@ def show_segmentation_analysis(result, title):
     # Connessioni: Testa-Torso, Braccia-Torso, Torso-Gambe, Gambe-Piedi
     skeleton_links = [
         (0, 2), # Testa - Torso
-        (1, 2), # Braccia - Torso
         (2, 3), # Torso - Gambe
         (3, 4)  # Gambe - Piedi
     ]
@@ -150,37 +152,51 @@ def show_segmentation_analysis(result, title):
         cv2.circle(img_final, pt, 6, (0, 0, 0), -1)     # Bordo nero
         cv2.circle(img_final, pt, 4, (255, 0, 0), -1)   # Centro rosso
 
-    # 5. Plot con Legenda
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 8), gridspec_kw={'width_ratios': [4, 1]})
+    # Plot con Legenda
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [4, 1]})
+    
     ax1.imshow(img_final)
     ax1.axis('off')
     ax1.set_title(title)
 
-    legend_elements = [Patch(facecolor=np.array(c)/255, edgecolor='black', label=result.names[k]) 
-                       for k, c in class_colors.items() if k in classes]
+    legend_elements = []
+    sorted_ids = sorted([k for k in class_colors.keys() if k in classes])
     
-    ax2.legend(handles=legend_elements, loc='center', title="Legenda")
+    for k in sorted_ids:
+        c = class_colors[k]
+        name = result.names[k].capitalize()
+        if k in final_centroids:
+            cx, cy = final_centroids[k]
+            label_text = f"{name}\nX={cx}, Y={cy}"
+        else:
+            label_text = name
+        legend_elements.append(Patch(facecolor=np.array(c)/255, edgecolor='black', label=label_text))
+    
+    ax2.legend(handles=legend_elements, loc='center', title="Legenda & Coordinate", fontsize=12)
     ax2.axis('off')
     plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":
     
-    MODEL_PATH = 'runs/segment/body_parts3/weights/best.pt' 
+    MODEL_PATH = 'runs/segment/body_parts4/weights/best.pt' 
     
     # Path per il test random
     VAL_IMAGES_PATH = 'assets/cihp-DatasetNinja/processed/images/val'
     
     # Path per il test specifico
-    TEST_IMAGE_PATH_FALL = 'digital-image-processing/caduta.jpg'
+    TEST_IMAGE_PATH = 'digital-image-processing/caduta.jpg'
+    TEST_IMAGE_PATH_2 = 'digital-image-processing/caduta.png'
+    TEST_IMAGE_PATH_3 = 'digital-image-processing/inpiedi.png'
 
-    TEST_IMAGE_PATH_NOTFALL = 'digital-image-processing/inpiedi.jpg'
+    # Test random (giusto per confronto)
+    test_random_image(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.25)
 
-    # 1. Esegui il test random (giusto per confronto)
-    test_random_image(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.2)
-
-    # 2. Esegui il test specifico su "caduta.jpg"
-    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_FALL, conf_threshold=0.25)
-
-     # 2. Esegui il test specifico su "caduta.jpg"
-    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_NOTFALL, conf_threshold=0.25)
+    # Test specifico su "caduta.jpg"
+    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH, conf_threshold=0.25)
+    
+    # Test specifico su "caduta.png"
+    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_2, conf_threshold=0.25)
+    
+    # Test specifico su "inpiedi.png"
+    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_3, conf_threshold=0.25)
