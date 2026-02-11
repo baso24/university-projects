@@ -14,6 +14,7 @@ from pathlib import Path
 from ultralytics import YOLO
 import cv2
 import shutil
+import os
 
 class BodyPartDatasetPreprocessor:
     def __init__(self, dataset_path, output_path, subset_ratio):
@@ -211,11 +212,11 @@ class YOLOBodySegmentationTrainer:
         self.dataset_yaml = dataset_yaml
         self.model = YOLO(model_name)
         if torch.cuda.is_available():
-            self.device = 'cuda'
-        elif torch.backends.mps.is_available():
-            self.device = 'mps'
+            self.device = "cuda"
+        #elif torch.backends.mps.is_available():
+            #self.device = "mps"
         else:
-            self.device = 'cpu'
+            self.device = "cpu"
         print(f"Device utilizzato: {self.device}")
 
     def train(self, epochs, batch, imgsz, project_dir):
@@ -229,10 +230,12 @@ class YOLOBodySegmentationTrainer:
             name='body_parts',
             exist_ok=False,
             val=True,
-            workers=0,
+            workers=4,
             conf=0.25,
             max_det=100,
-            plots=True
+            plots=False,
+            cache=False,
+            close_mosaic=10
         )
 
 # ========================================== main ==========================================
@@ -240,8 +243,8 @@ if __name__ == "__main__":
     
     # Configurazione training
     SUBSET_RATIO = 0.5    # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 10           # Numero di epoche
-    BATCH_SIZE = 64       # Dimensione batch
+    EPOCHS = 5           # Numero di epoche
+    BATCH_SIZE = 16       # Dimensione batch
     IMG_SIZE = 256        # Dimensione immagini
 
     # Parent directory dello script corrente
@@ -303,10 +306,9 @@ if __name__ == "__main__":
     
     # Configurazione modello
     path_to_best_model = 'yolo26n-seg.pt' 
-    FORCE_NEW_ARCH = True
 
     # Cerca l'ultimo modello best.pt disponibile nelle run precedenti
-    if not FORCE_NEW_ARCH and runs_path.exists():
+    if runs_path.exists():
         # Ottieni sottocartelle ordinate per data di modifica (più recenti prima)
         subdirs = sorted([d for d in runs_path.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
         for d in subdirs:
