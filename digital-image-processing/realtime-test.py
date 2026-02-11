@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 from ultralytics import YOLO
+import time
 
-def run_webcam_inference(model_path, conf_threshold=0.25):
+def run_webcam_inference(model_path, conf_threshold=0.4):
     print(f"Caricamento modello: {model_path}")
     try:
         model = YOLO(model_path)
@@ -28,11 +29,18 @@ def run_webcam_inference(model_path, conf_threshold=0.25):
         4: (128, 0, 128)    # Viola (Piedi)
     }
 
+    prev_frame_time = 0
+    new_frame_time = 0
+
     while True:
         ret, frame = cap.read()
         if not ret:
             print("Errore lettura frame.")
             break
+
+        new_frame_time = time.time()
+        fps = 1 / (new_frame_time - prev_frame_time) if prev_frame_time != 0 else 0
+        prev_frame_time = new_frame_time
 
         # Inferenza YOLO
         # verbose=False evita di stampare log per ogni frame
@@ -107,11 +115,15 @@ def run_webcam_inference(model_path, conf_threshold=0.25):
                 status_text = "FALL DETECTED!"
                 status_color = (0, 0, 255) # Rosso
             else:
-                status_text = "STATUS: OK"
+                status_text = "NO FALL DETECTED"
                 status_color = (0, 255, 0) # Verde
         else:
             status_text = "PARTIAL DETECTION"
             status_color = (0, 165, 255) # Arancione
+
+        # Visualizzazione FPS in alto a destra (Giallo)
+        cv2.putText(frame, f"FPS: {int(fps)}", (frame.shape[1] - 180, 50), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
         cv2.putText(frame, status_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
         cv2.imshow('YOLO Real-time Fall Detection', frame)
@@ -124,6 +136,6 @@ def run_webcam_inference(model_path, conf_threshold=0.25):
 
 if __name__ == "__main__":
     # Percorso del modello (puoi cambiarlo qui)
-    MODEL_PATH = 'runs/segment/body_parts4/weights/best.pt'
+    MODEL_PATH = 'runs/segment/body_parts6/weights/best.pt'
     
     run_webcam_inference(MODEL_PATH)

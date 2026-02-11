@@ -62,17 +62,29 @@ def test_specific_image(model_path, image_name, conf_threshold):
     show_segmentation_analysis(results[0], f"Segmentation analysis: {image_name}")
 
 def show_result(result, title):
+    # Immagine originale
+    orig_img = result.orig_img
+    orig_img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
+
     # Plot annotato da YOLO (in BGR)
     annotated_frame = result.plot()
     
     # BGR -> RGB per Matplotlib
     annotated_frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
 
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(14, 6))
 
+    plt.subplot(1, 2, 1)
+    plt.imshow(orig_img_rgb)
+    plt.axis('off')
+    plt.title("Originale")
+
+    plt.subplot(1, 2, 2)
     plt.imshow(annotated_frame_rgb)
     plt.axis('off')
     plt.title(title)
+
+    plt.tight_layout()
     plt.show()
 
 def show_segmentation_analysis(result, title):
