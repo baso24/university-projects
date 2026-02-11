@@ -6,11 +6,10 @@ from matplotlib.patches import Patch
 from pathlib import Path
 from ultralytics import YOLO
 
-def test_random_image(model_path, images_dir, conf_threshold):
-    """
-    Pesca un'immagine casuale dal dataset di validazione e mostra il risultato.
-    """
+def test_image_from_validationSet(model_path, images_dir, conf_threshold):
     print(f"\n--- TEST RANDOM DAL DATASET ---")
+
+    # Carica modello
     try:
         model = YOLO(model_path)
     except Exception as e:
@@ -29,44 +28,38 @@ def test_random_image(model_path, images_dir, conf_threshold):
         return
 
     random_image = random.choice(image_files)
-    print(f"Processando random: {random_image.name}")
 
-    # Inferenza
+    # Applico il modello
     results = model.predict(source=str(random_image), conf=conf_threshold, save=False, verbose=False)
     
     # Visualizzazione
-    show_result(results[0], f"Random Val: {random_image.name}")
+    show_result(results[0], f"Test on: {random_image.name}")
 
 def test_specific_image(model_path, image_name, conf_threshold):
-    """
-    Testa il modello su un file specifico nella directory corrente.
-    """
     print(f"\n--- TEST SPECIFICO SU '{image_name}' ---")
     
-    # 1. Verifica esistenza file
+    # Verifica esistenza file
     target_path = Path(image_name)
     if not target_path.exists():
         print(f"ERRORE: Il file '{image_name}' non è stato trovato nella directory corrente!")
         print(f"Cercato in: {target_path.absolute()}")
         return
 
-    # 2. Carica Modello
+    # Carica modello
     try:
         model = YOLO(model_path)
     except Exception as e:
         print(f"Errore caricamento modello: {e}")
         return
 
-    # 3. Inferenza
+    # Applico il modello
     results = model.predict(source=str(target_path), conf=conf_threshold, save=False, verbose=False)
 
-    # 4. Visualizzazione
-    if not results:
-        print("Nessun risultato generato.")
-        return
+    # Visualizzazione
+    show_result(results[0], f"Test on: {image_name}")
 
-    show_result(results[0], f"Test Specifico: {image_name}")
-    show_segmentation_analysis(results[0], f"Analisi Segmentazione: {image_name}")
+    # Visualizzazione analisi segmentazione
+    show_segmentation_analysis(results[0], f"Segmentation analysis: {image_name}")
 
 def show_result(result, title):
     # Plot annotato da YOLO (in BGR)
@@ -86,12 +79,12 @@ def show_segmentation_analysis(result, title):
     if not result.masks:
         return
 
-    # 1. Preparazione Immagine Base (RGB)
+    # Preparazione Immagine Base (RGB)
     orig_img = result.orig_img.copy()
     img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
     overlay = img_rgb.copy()
 
-    # 2. Definizione Colori (RGB) e Nomi
+    # Definizione Colori (RGB) e Nomi
     # 0: testa, 1: braccia, 2: torso, 3: gambe, 4: piedi
     class_colors = {
         0: (255, 255, 0),   # Giallo
@@ -105,7 +98,7 @@ def show_segmentation_analysis(result, title):
     masks_xy = result.masks.xy
     classes = result.boxes.cls.cpu().numpy().astype(int)
 
-    # 3. Disegno Maschere e Calcolo Centroidi
+    # Disegno maschere e calcolo centroidi
     for i, poly in enumerate(masks_xy):
         cls_id = classes[i]
         color = class_colors.get(cls_id, (200, 200, 200))
@@ -120,10 +113,10 @@ def show_segmentation_analysis(result, title):
                 class_moments[cls_id]['m01'] += M["m01"]
                 class_moments[cls_id]['m00'] += M["m00"]
 
-    # Calcolo centroidi unici per classe (media pesata)
+    # Calcolo centroidi unici per classe
     final_centroids = {}
     for cid, m in class_moments.items():
-        if cid == 1: # Skip braccia (nessuna distinzione dx/sx)
+        if cid == 1: # Skip braccia
             continue
         if m['m00'] != 0:
             cX = int(m['m10'] / m['m00'])
@@ -133,8 +126,8 @@ def show_segmentation_analysis(result, title):
     # Blending trasparenza
     img_final = cv2.addWeighted(overlay, 0.5, img_rgb, 0.5, 0)
 
-    # 4. Disegno Skeleton Semplificato (Singolo Soggetto)
-    # Connessioni: Testa-Torso, Braccia-Torso, Torso-Gambe, Gambe-Piedi
+    # Disegno skeleton
+    # Ci dobbiamo "assicurare" che ci sia una sola persona nella foto per avere un risultato coerente.
     skeleton_links = [
         (0, 2), # Testa - Torso
         (2, 3), # Torso - Gambe
@@ -152,12 +145,13 @@ def show_segmentation_analysis(result, title):
         cv2.circle(img_final, pt, 6, (0, 0, 0), -1)     # Bordo nero
         cv2.circle(img_final, pt, 4, (255, 0, 0), -1)   # Centro rosso
 
-    # Plot con Legenda
+    # Plot con legenda
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [4, 1]})
     
     ax1.imshow(img_final)
     ax1.axis('off')
-    ax1.set_title(title)
+    # Il titolo con il nome del file va sotto l'immagine
+    ax1.set_xlabel(title.replace("Segmentation analysis: ", ""), fontsize=12)
 
     legend_elements = []
     sorted_ids = sorted([k for k in class_colors.keys() if k in classes])
@@ -169,28 +163,53 @@ def show_segmentation_analysis(result, title):
             cx, cy = final_centroids[k]
             label_text = f"{name}\nX={cx}, Y={cy}"
         else:
-            label_text = name
+            # Se una parte chiave (testa, torso, gambe) non è rilevata, segnalalo nella legenda
+            if k in {0, 2, 3}:
+                label_text = f"{name}\n(non rilevato)"
+            else:
+                label_text = name
         legend_elements.append(Patch(facecolor=np.array(c)/255, edgecolor='black', label=label_text))
     
-    ax2.legend(handles=legend_elements, loc='center', title="Legenda & Coordinate", fontsize=12)
+    ax2.legend(handles=legend_elements, loc='center', title="Legenda e Coordinate", fontsize=12)
     ax2.axis('off')
-    plt.tight_layout()
+
+    # Verifica se sono presenti le componenti necessarie: Testa(0), Torso(2), Gambe(3)
+    if {0, 2, 3}.issubset(final_centroids.keys()):
+        if fall_detection(final_centroids):
+            plt.suptitle("POSSIBLE FALL DETECTED!", color='red', fontsize=16)
+        else:
+            plt.suptitle("UNDETECTED FALL", color='green', fontsize=16)
+    else:
+        plt.suptitle("Not all components required for crash analysis were detected", color='orange', fontsize=16)
+
+    # Aggiusto il layout per far spazio a suptitle e xlabel
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
+def fall_detection(centroids):
+    head_x, head_y = centroids[0]
+    torso_x, torso_y = centroids[2]
+    legs_x, legs_y = centroids[3]
+
+    # Se la distanza orizzontale è maggiore di quella verticale per i segmenti chiave
+    return (abs(head_y - torso_y) < abs(head_x - torso_x)) and (abs(head_y - legs_y) < abs(head_x - legs_x))
+
+# ========================================== main ==========================================
 if __name__ == "__main__":
     
+    # Path al modello che si desidera utilizzare per il test
     MODEL_PATH = 'runs/segment/body_parts4/weights/best.pt' 
     
-    # Path per il test random
+    # Path per il test random, immagine presa dal dataset di validazione
     VAL_IMAGES_PATH = 'assets/cihp-DatasetNinja/processed/images/val'
     
-    # Path per il test specifico
+    # Path per il test su immagini specifiche
     TEST_IMAGE_PATH = 'digital-image-processing/caduta.jpg'
     TEST_IMAGE_PATH_2 = 'digital-image-processing/caduta.png'
     TEST_IMAGE_PATH_3 = 'digital-image-processing/inpiedi.png'
 
-    # Test random (giusto per confronto)
-    test_random_image(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.25)
+    # Test random su immagine casuale del dataset di validazione
+    test_image_from_validationSet(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.25)
 
     # Test specifico su "caduta.jpg"
     test_specific_image(MODEL_PATH, TEST_IMAGE_PATH, conf_threshold=0.25)

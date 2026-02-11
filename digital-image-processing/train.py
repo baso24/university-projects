@@ -20,7 +20,36 @@ class BodyPartDatasetPreprocessor:
         self.dataset_path = Path(dataset_path)
         self.output_path = Path(output_path)
         self.subset_ratio = subset_ratio
-        self.target_classes = ['testa', 'braccia', 'torso', 'gambe', 'piedi']
+        self.cihp_map = {
+            # CLASSE 0: TESTA
+            'face': 0, 
+            'hair': 0, 
+            'hat': 0, 
+            'sunglasses': 0, 
+            'scarf': 0,
+
+            # CLASSE 1: BRACCIA
+            'left_arm': 1, 
+            'right_arm': 1, 
+            'glove': 1,
+
+            # CLASSE 2: TORSO
+            'torso_skin': 2, 
+            'coat': 2, 
+            'dress': 2, 
+            'upperclothes': 2,
+
+            # CLASSE 3: GAMBE
+            'pants': 3, 
+            'left_leg': 3, 
+            'right_leg': 3, 
+            'skirt': 3,
+
+            # CLASSE 4: PIEDI
+            'left_shoe': 4, 
+            'right_shoe': 4, 
+            'socks': 4
+        }
 
     def get_image_paths(self):
         img_dir = self.dataset_path / "img"
@@ -99,13 +128,10 @@ class BodyPartDatasetPreprocessor:
                     # Skip silenzioso se non troviamo geometria valida
                     continue
 
-                # Mapping Classi
-                class_id = -1
-                if any(x in label for x in ['hat', 'hair', 'face', 'sunglass', 'scarf']): class_id = 0 # Testa
-                elif any(x in label for x in ['arm', 'glove', 'hand']): class_id = 1 # Braccia
-                elif any(x in label for x in ['coat', 'dress', 'upper', 'torso', 'jumpsuit']): class_id = 2 # Torso
-                elif any(x in label for x in ['leg', 'pants', 'skirt']): class_id = 3 # Gambe
-                elif any(x in label for x in ['shoe', 'sock', 'boot']): class_id = 4 # Piedi
+                # Pulisci la label (minuscolo e rimuovi spazi extra per sicurezza)
+                clean_label = label.lower().strip()
+                # Se la label è nel dizionario, prendi l'ID, altrimenti -1
+                class_id = self.cihp_map.get(clean_label, -1)
 
                 if class_id != -1:
                     for points in polygons:
