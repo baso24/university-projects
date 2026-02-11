@@ -234,7 +234,7 @@ class YOLOBodySegmentationTrainer:
 if __name__ == "__main__":
     
     # --- CONFIGURAZIONE TRAINING ---
-    SUBSET_RATIO = 0.5  # Percentuale dataset da usare (0.05 = 5%)
+    SUBSET_RATIO = 0.25  # Percentuale dataset da usare (0.05 = 5%)
     EPOCHS = 10           # Numero di epoche
     BATCH_SIZE = 64     # Dimensione batch
     IMG_SIZE = 256       # Dimensione immagini
@@ -300,10 +300,13 @@ if __name__ == "__main__":
     print(f"\nDataset pronto con {len(train_files)} immagini di training.")
     
     runs_path = PROJECT_ROOT / 'runs' / 'segment'
-    path_to_best_model = 'yolov8n-seg.pt'
+    
+    # Configurazione modello
+    path_to_best_model = 'yolo26n-seg.pt' 
+    FORCE_NEW_ARCH = True
 
     # Cerca l'ultimo modello best.pt disponibile nelle run precedenti
-    if runs_path.exists():
+    if not FORCE_NEW_ARCH and runs_path.exists():
         # Ottieni sottocartelle ordinate per data di modifica (più recenti prima)
         subdirs = sorted([d for d in runs_path.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
         for d in subdirs:

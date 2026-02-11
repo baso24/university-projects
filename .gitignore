@@ -1,8 +1,10 @@
 #git ignore personalizzati
 assets/
+.vscode/
 gan.generated/
 dcgan.generated/
 yolov8n-seg.pt
+yolo26n-seg.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

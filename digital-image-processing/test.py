@@ -23,7 +23,7 @@ def test_random_image(model_path, images_dir, conf_threshold):
         return
 
     # Cerca file immagini
-    image_files = list(img_path_obj.glob('*.jpg')) + list(img_path_obj.glob('*.png'))
+    image_files = list(img_path_obj.glob('*.jpg'))
     if not image_files:
         print("Nessuna immagine trovata.")
         return
@@ -58,8 +58,6 @@ def test_specific_image(model_path, image_name, conf_threshold):
         return
 
     # 3. Inferenza
-    # Nota: su pose complesse come le cadute, a volte abbassare la conf aiuta a vedere cosa "pensa" il modello
-    print(f"Analizzando l'immagine...")
     results = model.predict(source=str(target_path), conf=conf_threshold, save=False, verbose=False)
 
     # 4. Visualizzazione
@@ -174,10 +172,15 @@ if __name__ == "__main__":
     VAL_IMAGES_PATH = 'assets/cihp-DatasetNinja/processed/images/val'
     
     # Path per il test specifico
-    TEST_IMAGE_PATH = 'digital-image-processing/caduta.jpg'
+    TEST_IMAGE_PATH_FALL = 'digital-image-processing/caduta.jpg'
+
+    TEST_IMAGE_PATH_NOTFALL = 'digital-image-processing/inpiedi.jpg'
 
     # 1. Esegui il test random (giusto per confronto)
     test_random_image(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.2)
 
     # 2. Esegui il test specifico su "caduta.jpg"
-    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH, conf_threshold=0.2)
+    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_FALL, conf_threshold=0.25)
+
+     # 2. Esegui il test specifico su "caduta.jpg"
+    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_NOTFALL, conf_threshold=0.25)
