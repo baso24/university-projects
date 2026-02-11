@@ -4,7 +4,7 @@
 
 <h3>Digital Image Processing</h3>
 <p><b>Title:</b> Pose Estimation and Fall Detection</p>
-<p><b>Description: </b>to be specified...</p>
+<p><b>Description: </b>Implementation of a training of Yolo-seg network only for certain parts of the human body (head, torso, arms, legs and feet) and study of their mutual positions to understand whether there has been a fall or not.</p>
 <br>
 
 
@@ -16,7 +16,7 @@
 
 <h3>High Performance Computer Architecture</h3>
 <p><b>Title: </b>Analysis and testing of the contents of Chapter 10, Parallel Patterns: Sparse Matrix Computation, from the book Programming Massively Parallel Processors 3rd Edition.</p>
-<p><b>Description: </b>Implementation and testing of the proposed solutions in pure CUDA, OpenMP, and Cilk, with performance evaluation. Sequential implementation was also performed to highlight the advantages of parallelization.</p>
+<p><b>Description: </b>Implementation and testing of the proposed solutions in pure CUDA and OpenMP with performance evaluation. Sequential implementation was also performed to highlight the advantages of parallelization.</p>
 <br>
 
 
