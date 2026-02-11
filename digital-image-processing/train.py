@@ -233,9 +233,7 @@ class YOLOBodySegmentationTrainer:
             workers=4,
             conf=0.25,
             max_det=100,
-            plots=False,
-            cache=False,
-            close_mosaic=10
+            plots=True
         )
 
 # ========================================== main ==========================================
@@ -243,8 +241,8 @@ if __name__ == "__main__":
     
     # Configurazione training
     SUBSET_RATIO = 0.5    # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 5           # Numero di epoche
-    BATCH_SIZE = 16       # Dimensione batch
+    EPOCHS = 10           # Numero di epoche
+    BATCH_SIZE = 128       # Dimensione batch
     IMG_SIZE = 256        # Dimensione immagini
 
     # Parent directory dello script corrente
