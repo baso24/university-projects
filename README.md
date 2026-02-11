@@ -16,7 +16,7 @@
 
 <h3>High Performance Computer Architecture</h3>
 <p><b>Title: </b>Analysis and testing of the contents of Chapter 10, Parallel Patterns: Sparse Matrix Computation, from the book Programming Massively Parallel Processors 3rd Edition.</p>
-<p><b>Description: </b>Implementation and testing of the proposed solutions in pure CUDA, OpenMP, and Cilk, with performance evaluation. Sequential implementation was also performed to highlight the advantages of parallelization.</p>
+<p><b>Description: </b>Implementation and testing of the proposed solutions in pure CUDA and OpenMP with performance evaluation. Sequential implementation was also performed to highlight the advantages of parallelization.</p>
 <br>
 
 
