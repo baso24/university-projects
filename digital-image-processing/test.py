@@ -66,6 +66,10 @@ def show_result(result, title):
     orig_img = cv2.imread(result.path)
     orig_img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
 
+    # Immagine originale
+    orig_img = result.orig_img
+    orig_img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
+
     # Plot annotato da YOLO (in BGR)
     annotated_frame = result.plot()
     # BGR -> RGB per Matplotlib
