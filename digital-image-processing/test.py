@@ -62,19 +62,32 @@ def test_specific_image(model_path, image_name, conf_threshold):
     show_segmentation_analysis(results[0], f"Segmentation analysis: {image_name}")
 
 def show_result(result, title):
+    # Carica l'immagine originale
+    orig_img = cv2.imread(result.path)
+    orig_img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
+
     # Plot annotato da YOLO (in BGR)
     annotated_frame = result.plot()
-    
     # BGR -> RGB per Matplotlib
     annotated_frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
 
-    plt.figure(figsize=(12, 6))
+    # Creazione della figura con due subplot affiancati
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
-    plt.imshow(annotated_frame_rgb)
-    plt.axis('off')
-    plt.title(title)
+    # Mostra l'immagine originale
+    axes[0].imshow(orig_img_rgb)
+    axes[0].set_title("Original photo")
+    axes[0].axis('off')
+    axes[0].set_xlabel(result.path, fontsize=10)
+
+    # Mostra il risultato dell'annotazione
+    axes[1].imshow(annotated_frame_rgb)
+    axes[1].set_title("Result")
+    axes[1].axis('off')
+    axes[1].set_xlabel(title, fontsize=10)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
-
 def show_segmentation_analysis(result, title):
     if not result.masks:
         return
@@ -181,6 +194,7 @@ def show_segmentation_analysis(result, title):
             plt.suptitle("UNDETECTED FALL", color='green', fontsize=16)
     else:
         plt.suptitle("Not all components required for crash analysis were detected", color='orange', fontsize=16)
+        plt.figtext(0.5, 0.92, "Couldn't detect these components: " + ", ".join([result.names[k].capitalize() for k in {0, 2, 3} if k not in final_centroids]), color='orange', fontsize=12, ha='center')
 
     # Aggiusto il layout per far spazio a suptitle e xlabel
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
