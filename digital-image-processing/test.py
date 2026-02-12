@@ -7,8 +7,6 @@ from pathlib import Path
 from ultralytics import YOLO
 
 def test_image_from_validationSet(model_path, images_dir, conf_threshold):
-    print(f"\n--- TEST RANDOM DAL DATASET ---")
-
     # Carica modello
     try:
         model = YOLO(model_path)
@@ -36,7 +34,6 @@ def test_image_from_validationSet(model_path, images_dir, conf_threshold):
     show_result(results[0], f"Test on: {random_image.name}")
 
 def test_specific_image(model_path, image_name, conf_threshold):
-    print(f"\n--- TEST SPECIFICO SU '{image_name}' ---")
     
     # Verifica esistenza file
     target_path = Path(image_name)
@@ -92,6 +89,7 @@ def show_result(result, title):
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
+    
 def show_segmentation_analysis(result, title):
     if not result.masks:
         return
@@ -140,11 +138,10 @@ def show_segmentation_analysis(result, title):
             cY = int(m['m01'] / m['m00'])
             final_centroids[cid] = (cX, cY)
 
-    # Blending trasparenza
     img_final = cv2.addWeighted(overlay, 0.5, img_rgb, 0.5, 0)
 
     # Disegno skeleton
-    # Ci dobbiamo "assicurare" che ci sia una sola persona nella foto per avere un risultato coerente.
+    # Ci dobbiamo assicurare che ci sia una sola persona nella foto per avere un risultato coerente.
     skeleton_links = [
         (0, 2), # Testa - Torso
         (2, 3), # Torso - Gambe
@@ -216,7 +213,7 @@ def fall_detection(centroids):
 if __name__ == "__main__":
     
     # Path al modello che si desidera utilizzare per il test
-    MODEL_PATH = 'runs/segment/body_parts7/weights/best.pt' 
+    MODEL_PATH = 'runs/segment/body_parts10/weights/best.pt' 
     
     # Path per il test random, immagine presa dal dataset di validazione
     VAL_IMAGES_PATH = 'assets/cihp-DatasetNinja/processed/images/val'

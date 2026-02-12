@@ -241,9 +241,9 @@ class YOLOBodySegmentationTrainer:
 if __name__ == "__main__":
     
     # Configurazione training
-    SUBSET_RATIO = 0.25    # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 5           # Numero di epoche
-    BATCH_SIZE = 64       # Dimensione batch
+    SUBSET_RATIO = 0.1    # Percentuale dataset da usare (0.05 = 5%)
+    EPOCHS = 50           # Numero di epoche
+    BATCH_SIZE = 32       # Dimensione batch
     IMG_SIZE = 416        # Dimensione immagini
 
     # Parent directory dello script corrente
@@ -307,6 +307,7 @@ if __name__ == "__main__":
     path_to_best_model = 'yolo26n-seg.pt' 
 
     # Cerca l'ultimo modello best.pt disponibile nelle run precedenti
+    """
     if runs_path.exists():
         # Ottieni sottocartelle ordinate per data di modifica (più recenti prima)
         subdirs = sorted([d for d in runs_path.iterdir() if d.is_dir()], key=lambda x: x.stat().st_mtime, reverse=True)
@@ -316,6 +317,7 @@ if __name__ == "__main__":
                 path_to_best_model = str(candidate)
                 print(f"Trovato modello precedente da cui ripartire: {path_to_best_model}")
                 break
+    """
 
     # Avvio training
     print("\nAvvio Training YOLO...")

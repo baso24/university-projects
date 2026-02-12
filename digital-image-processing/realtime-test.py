@@ -3,7 +3,7 @@ import numpy as np
 from ultralytics import YOLO
 import time
 
-def run_webcam_inference(model_path, conf_threshold=0.4):
+def run(model_path, conf_threshold):
     print(f"Caricamento modello: {model_path}")
     try:
         model = YOLO(model_path)
@@ -19,7 +19,6 @@ def run_webcam_inference(model_path, conf_threshold=0.4):
 
     print("Avvio webcam... Premi 'q' per uscire.")
 
-    # Definizione colori BGR per OpenCV (in test.py erano RGB)
     # 0: testa, 1: braccia, 2: torso, 3: gambe, 4: piedi
     class_colors = {
         0: (0, 255, 255),   # Giallo (Testa)
@@ -121,7 +120,7 @@ def run_webcam_inference(model_path, conf_threshold=0.4):
             status_text = "PARTIAL DETECTION"
             status_color = (0, 165, 255) # Arancione
 
-        # Visualizzazione FPS in alto a destra (Giallo)
+        # Visualizzazione fps
         cv2.putText(frame, f"FPS: {int(fps)}", (frame.shape[1] - 180, 50), 
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
@@ -135,7 +134,9 @@ def run_webcam_inference(model_path, conf_threshold=0.4):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    # Percorso del modello (puoi cambiarlo qui)
-    MODEL_PATH = 'runs/segment/body_parts7/weights/best.pt'
+    # Percorso del modello
+    MODEL_PATH = 'runs/segment/body_parts8/weights/best.pt'
     
-    run_webcam_inference(MODEL_PATH)
+    CONF_THRESHOLD = 0.4  # Soglia di confidenza
+    
+    run(MODEL_PATH, CONF_THRESHOLD)
