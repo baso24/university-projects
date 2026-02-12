@@ -136,6 +136,6 @@ def run_webcam_inference(model_path, conf_threshold=0.4):
 
 if __name__ == "__main__":
     # Percorso del modello (puoi cambiarlo qui)
-    MODEL_PATH = 'runs/segment/body_parts6/weights/best.pt'
+    MODEL_PATH = 'runs/segment/body_parts7/weights/best.pt'
     
     run_webcam_inference(MODEL_PATH)

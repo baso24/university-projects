@@ -213,6 +213,7 @@ class YOLOBodySegmentationTrainer:
         self.model = YOLO(model_name)
         if torch.cuda.is_available():
             self.device = "cuda"
+        # mps non funziona bene con yolo, ci mette più tempo che con la cpu
         #elif torch.backends.mps.is_available():
             #self.device = "mps"
         else:
@@ -240,10 +241,10 @@ class YOLOBodySegmentationTrainer:
 if __name__ == "__main__":
     
     # Configurazione training
-    SUBSET_RATIO = 0.5    # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 10           # Numero di epoche
-    BATCH_SIZE = 128       # Dimensione batch
-    IMG_SIZE = 256        # Dimensione immagini
+    SUBSET_RATIO = 0.25    # Percentuale dataset da usare (0.05 = 5%)
+    EPOCHS = 5           # Numero di epoche
+    BATCH_SIZE = 64       # Dimensione batch
+    IMG_SIZE = 416        # Dimensione immagini
 
     # Parent directory dello script corrente
     CURRENT_SCRIPT_DIR = Path(__file__).resolve().parent 
