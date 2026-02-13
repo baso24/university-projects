@@ -148,7 +148,7 @@ def run(model_path, conf_threshold):
 
 if __name__ == "__main__":
     # Percorso del modello
-    MODEL_PATH = 'runs/segment/body_parts8/weights/best.pt'
+    MODEL_PATH = 'runs/segment/body_parts11/weights/best.pt'
     
     CONF_THRESHOLD = 0.4  # Soglia di confidenza
     

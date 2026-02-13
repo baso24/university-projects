@@ -239,9 +239,9 @@ if __name__ == "__main__":
     VAL_IMAGES_PATH = 'assets/cihp-DatasetNinja/processed/images/val'
     
     # Path per il test su immagini specifiche
-    TEST_IMAGE_PATH = 'digital-image-processing/files/caduta.jpg'
-    TEST_IMAGE_PATH_2 = 'digital-image-processing/files/caduta.png'
-    TEST_IMAGE_PATH_3 = 'digital-image-processing/files/inpiedi.png'
+    TEST_IMAGE_PATH = 'digital-image-processing/test-dataset/images/caduta.jpg'
+    TEST_IMAGE_PATH_2 = 'digital-image-processing/test-dataset/images/caduta.png'
+    TEST_IMAGE_PATH_3 = 'digital-image-processing/test-dataset/images/inpiedi.png'
 
     # Test random su immagine casuale del dataset di validazione
     test_image_from_validationSet(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.25)

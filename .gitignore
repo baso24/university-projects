@@ -5,6 +5,7 @@ gan.generated/
 dcgan.generated/
 yolov8n-seg.pt
 yolo26n-seg.pt
+digital-image-processing/fall-dataset/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
