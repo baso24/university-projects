@@ -2,12 +2,13 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 import time
+import os
 
 def is_fallen(p1, p2):
     # Se la distanza verticale è minore di quella orizzontale -> Caduta
     return abs(p1[1] - p2[1]) < abs(p1[0] - p2[0])
 
-def run(model_path, conf_threshold):
+def run_video(model_path, video_path, conf_threshold):
     print(f"Caricamento modello: {model_path}")
     try:
         model = YOLO(model_path)
@@ -15,13 +16,17 @@ def run(model_path, conf_threshold):
         print(f"Errore caricamento modello: {e}")
         return
 
-    # Apre la webcam (indice 0 di solito è la webcam integrata)
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Errore: Impossibile aprire la webcam.")
+    if not os.path.exists(video_path):
+        print(f"Errore: Il file video '{video_path}' non esiste.")
         return
 
-    print("Avvio webcam... Premi 'q' per uscire.")
+    print(f"Apertura video: {video_path}")
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Errore: Impossibile aprire il video.")
+        return
+
+    print("Avvio elaborazione video... Premi 'q' per uscire anticipatamente.")
 
     # 0: testa, 1: braccia, 2: torso, 3: gambe, 4: piedi
     class_colors = {
@@ -32,28 +37,23 @@ def run(model_path, conf_threshold):
         4: (128, 0, 128)    # Viola (Piedi)
     }
 
-    prev_frame_time = 0
-    new_frame_time = 0
+    # Rende la finestra ridimensionabile manualmente
+    cv2.namedWindow('YOLO Video Fall Detection', cv2.WINDOW_NORMAL)
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("Errore lettura frame.")
+            print("Fine del video o errore lettura frame.")
             break
 
-        new_frame_time = time.time()
-        fps = 1 / (new_frame_time - prev_frame_time) if prev_frame_time != 0 else 0
-        prev_frame_time = new_frame_time
-
         # Inferenza YOLO
-        # verbose=False evita di stampare log per ogni frame
         results = model.predict(frame, conf=conf_threshold, verbose=False)
         result = results[0]
 
         # Copia del frame per creare l'overlay delle maschere
         overlay = frame.copy()
         
-        # Struttura per accumulare i momenti (come in test.py)
+        # Struttura per accumulare i momenti
         class_moments = {k: {'m10': 0.0, 'm01': 0.0, 'm00': 0.0} for k in class_colors}
         
         if result.masks:
@@ -64,19 +64,20 @@ def run(model_path, conf_threshold):
                 cls_id = classes[i]
                 color = class_colors.get(cls_id, (200, 200, 200))
                 
-                # Disegna maschera piena sull'overlay
-                pts = np.array(poly, np.int32).reshape((-1, 1, 2))
-                cv2.fillPoly(overlay, [pts], color)
-                
-                # Calcola momenti per i centroidi
-                M = cv2.moments(pts)
-                if M["m00"] != 0:
-                    if cls_id in class_moments:
-                        class_moments[cls_id]['m10'] += M["m10"]
-                        class_moments[cls_id]['m01'] += M["m01"]
-                        class_moments[cls_id]['m00'] += M["m00"]
+                # Disegna maschera piena sull'overlay se il poligono è valido
+                if len(poly) > 0:
+                    pts = np.array(poly, np.int32).reshape((-1, 1, 2))
+                    cv2.fillPoly(overlay, [pts], color)
+                    
+                    # Calcola momenti per i centroidi
+                    M = cv2.moments(pts)
+                    if M["m00"] != 0:
+                        if cls_id in class_moments:
+                            class_moments[cls_id]['m10'] += M["m10"]
+                            class_moments[cls_id]['m01'] += M["m01"]
+                            class_moments[cls_id]['m00'] += M["m00"]
 
-        # Calcolo centroidi unici per classe (escludendo braccia come in test.py)
+        # Calcolo centroidi unici per classe (escludendo braccia)
         final_centroids = {}
         for cid, m in class_moments.items():
             if cid == 1: # Skip braccia per il calcolo dello scheletro
@@ -86,7 +87,7 @@ def run(model_path, conf_threshold):
                 cY = int(m['m01'] / m['m00'])
                 final_centroids[cid] = (cX, cY)
 
-        # Blending trasparenza (sovrappone le maschere colorate all'immagine originale)
+        # Blending trasparenza
         frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0)
 
         # Disegno skeleton: Testa(0) -> Torso(2) -> Gambe(3) -> Piedi(4)
@@ -99,10 +100,6 @@ def run(model_path, conf_threshold):
         for pt in final_centroids.values():
             cv2.circle(frame, pt, 6, (0, 0, 0), -1)     # Bordo nero
             cv2.circle(frame, pt, 4, (255, 0, 0), -1)   # Centro rosso
-
-        # Logica Fall Detection (identica a test.py)
-        status_text = "WAITING..."
-        status_color = (200, 200, 200) # Grigio
 
         fall_detected = False
         pair_found = False
@@ -132,13 +129,14 @@ def run(model_path, conf_threshold):
             else:
                 status_text = "NO FALL DETECTED"
                 status_color = (0, 255, 0) # Verde
+        else:
+            status_text = "INSUFFICIENT DATA"
+            status_color = (0, 255, 255) # Giallo
 
-        # Visualizzazione fps
-        cv2.putText(frame, f"FPS: {int(fps)}", (frame.shape[1] - 180, 50), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-
-        cv2.putText(frame, status_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
-        cv2.imshow('YOLO Real-time Fall Detection', frame)
+        # Visualizzazione stato in alto a sinistra
+        cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, status_color, 2)
+        
+        cv2.imshow('YOLO Video Fall Detection', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -148,8 +146,17 @@ def run(model_path, conf_threshold):
 
 if __name__ == "__main__":
     # Percorso del modello
-    MODEL_PATH = 'runs/segment/body_parts8/weights/best.pt'
+    MODEL_PATH = 'runs/segment/body_parts10/weights/best.pt'
     
-    CONF_THRESHOLD = 0.4  # Soglia di confidenza
+    # Percorso del video .avi (Modifica questo path con il tuo file video)
+    VIDEO_PATH_1 = 'digital-image-processing/files/video_caduta.avi'
+    VIDEO_PATH_2 = 'digital-image-processing/files/video_caduta_2.avi'
+    VIDEO_PATH_3 = 'digital-image-processing/files/video_caduta_3.avi'
+    VIDEO_PATH_4 = 'digital-image-processing/files/video_caduta.mp4'
     
-    run(MODEL_PATH, CONF_THRESHOLD)
+    CONF_THRESHOLD = 0.2  # Soglia di confidenza
+    
+    run_video(MODEL_PATH, VIDEO_PATH_1, CONF_THRESHOLD)
+    run_video(MODEL_PATH, VIDEO_PATH_2, CONF_THRESHOLD)
+    run_video(MODEL_PATH, VIDEO_PATH_3, CONF_THRESHOLD)
+    run_video(MODEL_PATH, VIDEO_PATH_4, CONF_THRESHOLD)

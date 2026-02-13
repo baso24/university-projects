@@ -187,41 +187,61 @@ def show_segmentation_analysis(result, title):
     ax2.legend(handles=legend_elements, loc='center', title="Legenda e Coordinate", fontsize=12)
     ax2.axis('off')
 
-    # Verifica se sono presenti le componenti necessarie: Testa(0), Torso(2), Gambe(3)
-    if {0, 2, 3}.issubset(final_centroids.keys()):
-        if fall_detection(final_centroids):
+    is_fall, pair_found = fall_detection(final_centroids)
+
+    if pair_found:
+        if is_fall:
             plt.suptitle("POSSIBLE FALL DETECTED!", color='red', fontsize=16)
         else:
             plt.suptitle("UNDETECTED FALL", color='green', fontsize=16)
     else:
-        plt.suptitle("Not all components required for crash analysis were detected", color='orange', fontsize=16)
-        plt.figtext(0.5, 0.92, "Couldn't detect these components: " + ", ".join([result.names[k].capitalize() for k in {0, 2, 3} if k not in final_centroids]), color='orange', fontsize=12, ha='center')
+        plt.suptitle("Not enough components for fall analysis", color='orange', fontsize=16)
 
     # Aggiusto il layout per far spazio a suptitle e xlabel
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
-def fall_detection(centroids):
-    head_x, head_y = centroids[0]
-    torso_x, torso_y = centroids[2]
-    legs_x, legs_y = centroids[3]
+def is_fallen_check(p1, p2):
+    # Se la distanza verticale è minore di quella orizzontale -> Caduta
+    return abs(p1[1] - p2[1]) < abs(p1[0] - p2[0])
 
-    # Se la distanza orizzontale è maggiore di quella verticale per i segmenti chiave
-    return (abs(head_y - torso_y) < abs(head_x - torso_x)) and (abs(head_y - legs_y) < abs(head_x - legs_x))
+def fall_detection(centroids):
+    fall_detected = False
+    pair_found = False
+
+    # Case 1: Testa (0) e Torso (2)
+    if 0 in centroids and 2 in centroids:
+        pair_found = True
+        if is_fallen_check(centroids[0], centroids[2]):
+            fall_detected = True
+
+    # Case 2: Testa (0) e Gambe (3)
+    if not fall_detected and 0 in centroids and 3 in centroids:
+        pair_found = True
+        if is_fallen_check(centroids[0], centroids[3]):
+            fall_detected = True
+
+    # Case 3: Torso (2) e Gambe (3)
+    if not fall_detected and 2 in centroids and 3 in centroids:
+        pair_found = True
+        if is_fallen_check(centroids[2], centroids[3]):
+            fall_detected = True
+
+    return fall_detected, pair_found
 
 # ========================================== main ==========================================
 if __name__ == "__main__":
     
     # Path al modello che si desidera utilizzare per il test
-    MODEL_PATH = 'runs/segment/body_parts10/weights/best.pt' 
+    MODEL_PATH = 'runs/segment/body_parts11/weights/best.pt' 
     
     # Path per il test random, immagine presa dal dataset di validazione
     VAL_IMAGES_PATH = 'assets/cihp-DatasetNinja/processed/images/val'
     
     # Path per il test su immagini specifiche
-    TEST_IMAGE_PATH = 'digital-image-processing/caduta.jpg'
-    TEST_IMAGE_PATH_2 = 'digital-image-processing/caduta.png'
-    TEST_IMAGE_PATH_3 = 'digital-image-processing/inpiedi.png'
+    TEST_IMAGE_PATH = 'digital-image-processing/files/caduta.jpg'
+    TEST_IMAGE_PATH_2 = 'digital-image-processing/files/caduta.png'
+    TEST_IMAGE_PATH_3 = 'digital-image-processing/files/inpiedi.png'
 
     # Test random su immagine casuale del dataset di validazione
     test_image_from_validationSet(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.25)
