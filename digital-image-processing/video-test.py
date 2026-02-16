@@ -146,7 +146,7 @@ def run_video(model_path, video_path, conf_threshold):
 
 if __name__ == "__main__":
     # Percorso del modello
-    MODEL_PATH = 'runs/segment/body_parts10/weights/best.pt'
+    MODEL_PATH = 'runs/segment/body_parts12/weights/best.pt'
     
     # Percorso del video .avi (Modifica questo path con il tuo file video)
     VIDEO_PATH_1 = 'digital-image-processing/test-dataset/videos/video_caduta.avi'
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     VIDEO_PATH_3 = 'digital-image-processing/test-dataset/videos/video_caduta_3.avi'
     VIDEO_PATH_4 = 'digital-image-processing/test-dataset/videos/video_caduta.mp4'
     
-    CONF_THRESHOLD = 0.2  # Soglia di confidenza
+    CONF_THRESHOLD = 0.3  # Soglia di confidenza
     
     run_video(MODEL_PATH, VIDEO_PATH_1, CONF_THRESHOLD)
     run_video(MODEL_PATH, VIDEO_PATH_2, CONF_THRESHOLD)
