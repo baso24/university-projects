@@ -242,9 +242,9 @@ if __name__ == "__main__":
     
     # Configurazione training
     SUBSET_RATIO = 0.1    # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 50           # Numero di epoche
+    EPOCHS = 200           # Numero di epoche
     BATCH_SIZE = 32       # Dimensione batch
-    IMG_SIZE = 416        # Dimensione immagini
+    IMG_SIZE = 640        # Dimensione immagini
 
     # Parent directory dello script corrente
     CURRENT_SCRIPT_DIR = Path(__file__).resolve().parent 
