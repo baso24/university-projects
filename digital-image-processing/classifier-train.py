@@ -15,7 +15,6 @@ def get_centroids_vector(result):
     Classi: 0: testa, 1: braccia, 2: torso, 3: gambe, 4: piedi
     Output: lista [x0, y0, x1, y1, x2, y2, x3, y3, x4, y4]
     """
-    # 0: testa, 1: braccia, 2: torso, 3: gambe, 4: piedi
     class_ids = [0, 1, 2, 3, 4]
     
     # Struttura per accumulare i momenti per ogni classe
@@ -54,10 +53,22 @@ def get_centroids_vector(result):
             centroids_vector.extend([cX, cY])
         else:
             centroids_map[cid] = None
-            # Se manca il centroide, inseriamo 0,0 per mantenere il vettore di lunghezza fissa
-            centroids_vector.extend([0, 0])
+            # Se manca il centroide, inseriamo -1, -1 come valore "sentinella"
+            centroids_vector.extend([-1, -1])
 
     return centroids_vector, centroids_map
+
+def normalize_vector(vector, shape):
+    h, w = shape
+    norm_vector = []
+    for j in range(0, len(vector), 2):
+        # Se il valore è -1 (dato mancante), lo manteniamo tale anche dopo la normalizzazione
+        if vector[j] == -1:
+            norm_vector.extend([-1.0, -1.0])
+        else:
+            norm_vector.append(vector[j] / w if w > 0 else 0)
+            norm_vector.append(vector[j+1] / h if h > 0 else 0)
+    return norm_vector
 
 class FallDataset(Dataset):
     def __init__(self, images_dir, labels_file, model):
@@ -94,14 +105,7 @@ class FallDataset(Dataset):
             
             # Estrazione vettore grezzo
             vector, _ = get_centroids_vector(result)
-            
-            # Normalizzazione coordinate (x/width, y/height) per aiutare la rete neurale
-            # Il vettore è [x0, y0, x1, y1, ...]
-            h, w = result.orig_shape
-            norm_vector = []
-            for j in range(0, len(vector), 2):
-                norm_vector.append(vector[j] / w if w > 0 else 0)
-                norm_vector.append(vector[j+1] / h if h > 0 else 0)
+            norm_vector = normalize_vector(vector, result.orig_shape)
 
             self.data.append(norm_vector)
             self.labels.append(raw_labels[i])
@@ -162,12 +166,7 @@ def predict_single_image(yolo_model, classifier, img_path):
     # Estrazione feature
     vector, _ = get_centroids_vector(result)
     
-    # Normalizzazione (fondamentale perché la rete è addestrata su dati normalizzati)
-    h, w = result.orig_shape
-    norm_vector = []
-    for j in range(0, len(vector), 2):
-        norm_vector.append(vector[j] / w if w > 0 else 0)
-        norm_vector.append(vector[j+1] / h if h > 0 else 0)
+    norm_vector = normalize_vector(vector, result.orig_shape)
 
     # Predizione
     classifier.eval()
@@ -232,6 +231,7 @@ if __name__ == "__main__":
     # Loop di Training Multiplo
     NUM_RUNS = 10
     EPOCHS = 500
+    LEARNING_RATE = 0.01
     best_avg_error = float('inf')
     best_model_wts = None
 
@@ -253,19 +253,19 @@ if __name__ == "__main__":
             nn.Linear(32, 1),
             nn.Sigmoid()
         )
-        criterion = nn.BCELoss()
-        optimizer = optim.Adam(classifier.parameters(), lr=0.01)
+        loss_function = nn.BCELoss()
+        optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
 
-        # Training
+        # Training e validazione
         for epoch in range(EPOCHS):
-            train_loss = train_epoch(classifier, train_loader, criterion, optimizer)
-            val_loss, acc, prec, rec, f1 = validate_model(classifier, val_loader, criterion)
+            train_loss = train_epoch(classifier, train_loader, loss_function, optimizer)
+            val_loss, acc, prec, rec, f1 = validate_model(classifier, val_loader, loss_function)
             
-            if (epoch + 1) % 20 == 0:
+            if (epoch + 1) % 50 == 0:
                 print(f"  Epoch {epoch+1}/{EPOCHS} | Val Loss: {val_loss:.4f} | Acc: {acc:.2f}")
 
-        # Valutazione sul Test Set
-        print(f"--- Valutazione Test Run {run+1} ---")
+        # Test 
+        print(f"--- Fase di test, Run {run+1} ---")
         classifier.eval()
         total_diff = 0.0
         valid_test = False
@@ -274,17 +274,11 @@ if __name__ == "__main__":
             valid_test = True
             with torch.no_grad():
                 for i, img_path in enumerate(test_images):
-                    # Inferenza YOLO
                     results = yolo_model.predict(source=str(img_path), conf=0.25, verbose=False)
                     result = results[0]
                     vector, _ = get_centroids_vector(result)
                     
-                    # Normalizzazione
-                    h, w = result.orig_shape
-                    norm_vector = []
-                    for j in range(0, len(vector), 2):
-                        norm_vector.append(vector[j] / w if w > 0 else 0)
-                        norm_vector.append(vector[j+1] / h if h > 0 else 0)
+                    norm_vector = normalize_vector(vector, result.orig_shape)
 
                     # Predizione
                     input_tensor = torch.tensor(norm_vector, dtype=torch.float32).unsqueeze(0)
@@ -305,7 +299,7 @@ if __name__ == "__main__":
                 best_model_wts = copy.deepcopy(classifier.state_dict())
                 print("  -> NUOVO MIGLIOR MODELLO!")
         else:
-            print("  Test saltato: dati mancanti o non allineati.")
+            print("Test saltato: dati mancanti o non allineati.")
 
     # Salvataggio Miglior Modello
     if best_model_wts:
