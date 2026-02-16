@@ -166,7 +166,7 @@ def run_test(yolo_model_path, classifier_model_path, test_images_dir):
         norm_vec_str = "[" + ", ".join([f"{x:.4f}" for x in vector_norm]) + "]"
         info_text = (
             f"Input Vector:\n{norm_vec_str}\n\n"
-            "Classes Map: [0:Head, 1:Arms, 2:Torso, 3:Legs, 4:Feet]"
+            "Classes Map: [0: Head, 1: Arms, 2: Torso, 3: Legs, 4: Feet]"
         )
         plt.figtext(0.5, 0.08, info_text, wrap=True, horizontalalignment='center', fontsize=10)
 
