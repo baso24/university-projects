@@ -184,7 +184,7 @@ def predict_single_image(yolo_model, classifier, img_path):
 
 if __name__ == "__main__":
     # Paths
-    MODEL_PATH = 'runs/segment/body_parts11/weights/best.pt' 
+    MODEL_PATH = 'runs/segment/body_parts12/weights/best.pt' 
     
     BASE_DIR = 'digital-image-processing/fall-dataset'
     TRAIN_IMG_DIR = f'{BASE_DIR}/images/train'
