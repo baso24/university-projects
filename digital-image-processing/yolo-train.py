@@ -176,10 +176,10 @@ class BodyPartDatasetPreprocessor:
         train_imgs = images[:split_idx]
         val_imgs = images[split_idx:]
 
-        self._process_batch(train_imgs, dirs['train_img'], dirs['train_lbl'], "Train")
-        self._process_batch(val_imgs, dirs['val_img'], dirs['val_lbl'], "Val")
+        self.process_batch(train_imgs, dirs['train_img'], dirs['train_lbl'], "Train")
+        self.process_batch(val_imgs, dirs['val_img'], dirs['val_lbl'], "Val")
 
-    def _process_batch(self, image_list, img_out, lbl_out, stage_name):
+    def process_batch(self, image_list, img_out, lbl_out, stage_name):
         print(f"\nProcessando {stage_name} set ({len(image_list)} immagini)...")
         
         for idx, img_path in enumerate(image_list):
@@ -196,7 +196,7 @@ class BodyPartDatasetPreprocessor:
             annotations = []
             if json_path.exists():
                 annotations = self.parse_dataset_ninja_json(json_path, w, h)
-                if not annotations and idx < 5:
+                if not annotations:
                     print(f"JSON vuoto o classi non riconosciute per: {img_path.name}")
             
             if annotations:
