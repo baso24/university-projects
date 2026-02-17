@@ -21,7 +21,7 @@ def run(model_path, conf_threshold):
         print("Errore: Impossibile aprire la webcam.")
         return
 
-    print("Avvio webcam... Premi 'q' per uscire.")
+    print("Avvio webcam. Premi 'q' per uscire.")
 
     # 0: testa, 1: braccia, 2: torso, 3: gambe, 4: piedi
     class_colors = {
@@ -146,6 +146,7 @@ def run(model_path, conf_threshold):
     cap.release()
     cv2.destroyAllWindows()
 
+# ========================================== main ==========================================
 if __name__ == "__main__":
     # Percorso del modello
     MODEL_PATH = 'runs/segment/body_parts11/weights/best.pt'

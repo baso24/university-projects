@@ -78,13 +78,17 @@ def show_result(result, title):
     # Mostra l'immagine originale
     axes[0].imshow(orig_img_rgb)
     axes[0].set_title("Original photo")
-    axes[0].axis('off')
+    axes[0].set_xticks([])
+    axes[0].set_yticks([])
+    axes[0].set_frame_on(False)
     axes[0].set_xlabel(result.path, fontsize=10)
 
     # Mostra il risultato dell'annotazione
     axes[1].imshow(annotated_frame_rgb)
     axes[1].set_title("Result")
-    axes[1].axis('off')
+    axes[1].set_xticks([])
+    axes[1].set_yticks([])
+    axes[1].set_frame_on(False)
     axes[1].set_xlabel(title, fontsize=10)
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -163,7 +167,9 @@ def show_segmentation_analysis(result, title):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [4, 1]})
     
     ax1.imshow(img_final)
-    ax1.axis('off')
+    ax1.set_xticks([])
+    ax1.set_yticks([])
+    ax1.set_frame_on(False)
     # Il titolo con il nome del file va sotto l'immagine
     ax1.set_xlabel(title.replace("Segmentation analysis: ", ""), fontsize=12)
 
@@ -202,7 +208,7 @@ def show_segmentation_analysis(result, title):
     plt.show()
 
 def is_fallen_check(p1, p2):
-    # Se la distanza verticale è minore di quella orizzontale -> Caduta
+    # Se la distanza verticale è minore di quella orizzontale -> Fall detection
     return abs(p1[1] - p2[1]) < abs(p1[0] - p2[0])
 
 def fall_detection(centroids):
@@ -240,17 +246,13 @@ if __name__ == "__main__":
     
     # Path per il test su immagini specifiche
     TEST_IMAGE_PATH = 'digital-image-processing/test-dataset/images/caduta.jpg'
-    TEST_IMAGE_PATH_2 = 'digital-image-processing/test-dataset/images/caduta.png'
-    TEST_IMAGE_PATH_3 = 'digital-image-processing/test-dataset/images/inpiedi.png'
+    TEST_IMAGE_PATH_3 = 'digital-image-processing/test-dataset/images/inpiedi.jpg'
 
     # Test random su immagine casuale del dataset di validazione
     test_image_from_validationSet(MODEL_PATH, VAL_IMAGES_PATH, conf_threshold=0.25)
 
     # Test specifico su "caduta.jpg"
     test_specific_image(MODEL_PATH, TEST_IMAGE_PATH, conf_threshold=0.25)
-    
-    # Test specifico su "caduta.png"
-    test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_2, conf_threshold=0.25)
     
     # Test specifico su "inpiedi.png"
     test_specific_image(MODEL_PATH, TEST_IMAGE_PATH_3, conf_threshold=0.25)

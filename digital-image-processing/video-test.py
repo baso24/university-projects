@@ -5,7 +5,7 @@ import time
 import os
 
 def is_fallen(p1, p2):
-    # Se la distanza verticale è minore di quella orizzontale -> Caduta
+    # Se la distanza verticale è minore di quella orizzontale -> Fall detection
     return abs(p1[1] - p2[1]) < abs(p1[0] - p2[0])
 
 def run_video(model_path, video_path, conf_threshold):
@@ -26,7 +26,7 @@ def run_video(model_path, video_path, conf_threshold):
         print("Errore: Impossibile aprire il video.")
         return
 
-    print("Avvio elaborazione video... Premi 'q' per uscire anticipatamente.")
+    print("Avvio elaborazione video. Premi 'q' per uscire anticipatamente.")
 
     # 0: testa, 1: braccia, 2: torso, 3: gambe, 4: piedi
     class_colors = {
@@ -37,7 +37,6 @@ def run_video(model_path, video_path, conf_threshold):
         4: (128, 0, 128)    # Viola (Piedi)
     }
 
-    # Rende la finestra ridimensionabile manualmente
     cv2.namedWindow('YOLO Video Fall Detection', cv2.WINDOW_NORMAL)
 
     while True:
@@ -144,19 +143,20 @@ def run_video(model_path, video_path, conf_threshold):
     cap.release()
     cv2.destroyAllWindows()
 
+# ========================================== main ==========================================
 if __name__ == "__main__":
     # Percorso del modello
     MODEL_PATH = 'runs/segment/body_parts12/weights/best.pt'
     
-    # Percorso del video .avi (Modifica questo path con il tuo file video)
+    # Percorsi dei video da voler testare
     VIDEO_PATH_1 = 'digital-image-processing/test-dataset/videos/video_caduta.avi'
     VIDEO_PATH_2 = 'digital-image-processing/test-dataset/videos/video_caduta_2.avi'
     VIDEO_PATH_3 = 'digital-image-processing/test-dataset/videos/video_caduta_3.avi'
     VIDEO_PATH_4 = 'digital-image-processing/test-dataset/videos/video_caduta.mp4'
     
-    CONF_THRESHOLD = 0.3  # Soglia di confidenza
+    CONF_THRESHOLD = 0.4  # Soglia di confidenza
     
     run_video(MODEL_PATH, VIDEO_PATH_1, CONF_THRESHOLD)
-    run_video(MODEL_PATH, VIDEO_PATH_2, CONF_THRESHOLD)
+    #run_video(MODEL_PATH, VIDEO_PATH_2, CONF_THRESHOLD)
     run_video(MODEL_PATH, VIDEO_PATH_3, CONF_THRESHOLD)
-    run_video(MODEL_PATH, VIDEO_PATH_4, CONF_THRESHOLD)
+    #run_video(MODEL_PATH, VIDEO_PATH_4, CONF_THRESHOLD)

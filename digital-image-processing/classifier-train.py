@@ -58,6 +58,7 @@ def get_centroids_vector(result):
 
     return centroids_vector, centroids_map
 
+# Funzione di normalizzazione del vettore dei centroidi (da pixel a valori tra 0 e 1)
 def normalize_vector(vector, shape):
     h, w = shape
     norm_vector = []
@@ -182,6 +183,7 @@ def predict_single_image(yolo_model, classifier, img_path):
         print("RISULTATO: NON CADUTA")
     print("-" * 30)
 
+# ========================================== main ==========================================
 if __name__ == "__main__":
     # Paths
     MODEL_PATH = 'runs/segment/body_parts12/weights/best.pt' 
@@ -205,14 +207,17 @@ if __name__ == "__main__":
     print("--- Preparazione Validation Set ---")
     val_dataset = FallDataset(VAL_IMG_DIR, VAL_LBL_FILE, yolo_model)
 
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
+    # Batch Size e DataLoader
+    BATCH_SIZE = 8
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-    # Preparazione Test Set (Files)
+    # Preparazione test dataset
     test_dir = Path('digital-image-processing/test-dataset')
     test_img_path = test_dir / 'images'
     test_lbl_path = test_dir / 'labels' / 'test-label.txt'
     
+    # Caricamento immagini e label di test
     test_images = []
     if test_dir.exists():
         for ext in ['*.jpg', '*.png']:
@@ -228,7 +233,7 @@ if __name__ == "__main__":
     if len(test_images) != len(test_labels):
         print(f"ATTENZIONE: Numero immagini test ({len(test_images)}) != Numero label test ({len(test_labels)})")
 
-    # Loop di Training Multiplo
+    # NUM_RUNS specifica quanti cicli di training+test eseguire per selezionare il miglior modello in base all'errore medio assoluto sul test set
     NUM_RUNS = 10
     EPOCHS = 500
     LEARNING_RATE = 0.01
@@ -240,7 +245,7 @@ if __name__ == "__main__":
     for run in range(NUM_RUNS):
         print(f"\n{'='*15} RUN {run+1}/{NUM_RUNS} {'='*15}")
         
-        # Re-inizializzazione Classificatore
+        # Classificatore
         classifier = nn.Sequential(
             nn.Linear(10, 128),
             nn.BatchNorm1d(128),
@@ -253,6 +258,7 @@ if __name__ == "__main__":
             nn.Linear(32, 1),
             nn.Sigmoid()
         )
+        # Loss fucntion e optimizer
         loss_function = nn.BCELoss()
         optimizer = optim.Adam(classifier.parameters(), lr=LEARNING_RATE)
 
@@ -262,16 +268,16 @@ if __name__ == "__main__":
             val_loss, acc, prec, rec, f1 = validate_model(classifier, val_loader, loss_function)
             
             if (epoch + 1) % 50 == 0:
+                # Stampo ogni 50 epoche la loss in fase di validazione e l'accuracy
+                # Possibile stampare anche altre metriche di monitoraggio come precision, recall, f1-score
                 print(f"  Epoch {epoch+1}/{EPOCHS} | Val Loss: {val_loss:.4f} | Acc: {acc:.2f}")
 
-        # Test 
+        # Avvio fase di test una volta finita la fase di training e validation 
         print(f"--- Fase di test, Run {run+1} ---")
         classifier.eval()
         total_diff = 0.0
-        valid_test = False
 
         if test_images and len(test_images) == len(test_labels):
-            valid_test = True
             with torch.no_grad():
                 for i, img_path in enumerate(test_images):
                     results = yolo_model.predict(source=str(img_path), conf=0.25, verbose=False)
@@ -285,6 +291,8 @@ if __name__ == "__main__":
                     output = classifier(input_tensor)
                     prob = output.item()
                     
+                    # Calcolo differenza tra prediction e label 
+                    # 1 = caduta, 0 = non caduta
                     label = test_labels[i]
                     diff = abs(prob - label)
                     total_diff += diff
@@ -301,7 +309,7 @@ if __name__ == "__main__":
         else:
             print("Test saltato: dati mancanti o non allineati.")
 
-    # Salvataggio Miglior Modello
+    # Salvataggio miglior modello come .pth così da poterlo caricare succesivamente e fare nuovi test
     if best_model_wts:
         save_path = Path(__file__).resolve().parent / 'classifier.pth'
         torch.save(best_model_wts, save_path)

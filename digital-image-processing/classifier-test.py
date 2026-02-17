@@ -55,6 +55,7 @@ def get_centroids_vector(result):
 
     return centroids_vector, centroids_map
 
+# Funzione di normalizzazione del vettore dei centroidi (da pixel a valori tra 0 e 1)
 def normalize_vector(vector, shape):
     h, w = shape
     norm_vector = []
@@ -173,6 +174,7 @@ def run_test(yolo_model_path, classifier_model_path, test_images_dir):
         plt.tight_layout(rect=[0, 0.2, 1, 0.85])
         plt.show()
 
+# ========================================== main ==========================================
 if __name__ == "__main__":
     # Path modello
     YOLO_PATH = 'runs/segment/body_parts12/weights/best.pt'
@@ -182,6 +184,8 @@ if __name__ == "__main__":
     CLASSIFIER_PATH = CURRENT_DIR / 'classifier.pth'
     
     # Path delle immagini di test
+    # Verranno testate tutte le immagini presenti in questa cartella
+    # In particolare con estensione png, jpg e jpeg
     IMAGES_DIR = 'digital-image-processing/test-dataset/images'
 
     run_test(YOLO_PATH, CLASSIFIER_PATH, IMAGES_DIR)
