@@ -58,16 +58,14 @@ struct JDSMatrix {
     std::vector<int> row_lengths;   // Lunghezza di ogni riga permutata (utile per il kernel)
 };
 
-// Funzione di conversione
-// --- Funzioni Esposte ---
 
-// 1. Legge il file .mtx e restituisce un vettore di elementi COO grezzi
+// Legge il file .mtx e restituisce un vettore di elementi COO grezzi
 std::vector<COOElement> read_mtx_file(const std::string& filename, int& M, int& N, int& nnz);
 
-// 2. Converte i dati COO in CSR
+// Converte i dati COO in CSR
 CSRMatrix convert_to_csr(const std::vector<COOElement>& elements, int M, int N);
 
-// 3. Converte i dati COO in ELL
+// Converte i dati COO in ELL
 // Usa 'use_gpu_layout = true' quando prepari i dati per CUDA!
 ELLMatrix convert_to_ell(const std::vector<COOElement>& elements, int M, const std::vector<int>& row_ptr, bool use_gpu_layout = false);
 
@@ -75,11 +73,7 @@ HybridMatrix convert_to_hybrid(const std::vector<COOElement>& elements, int M, i
 
 JDSMatrix convert_to_jds(const std::vector<COOElement>& elements, int M, int N, const std::vector<int>& row_ptr_csr);
 
-// 4. Utility per stampare info sulle matrici
+// Utility per stampare info sulle matrici
 void print_matrix_info(const CSRMatrix& csr, const ELLMatrix& ell, const HybridMatrix& hyb, const JDSMatrix& jds);
-// Funzione per calcolare un K intelligente (es. media NNZ * 2)
-int calculate_hybrid_cutoff(int M, int nnz);
-
-// Funzione di conversione
 
 #endif // MTX_READER_H
