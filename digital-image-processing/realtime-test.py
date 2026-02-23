@@ -15,7 +15,7 @@ def run(model_path, conf_threshold):
         print(f"Errore caricamento modello: {e}")
         return
 
-    # Apre la webcam (indice 0 di solito è la webcam integrata)
+    # Apre la webcam
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Errore: Impossibile aprire la webcam.")
@@ -53,7 +53,7 @@ def run(model_path, conf_threshold):
         # Copia del frame per creare l'overlay delle maschere
         overlay = frame.copy()
         
-        # Struttura per accumulare i momenti (come in test.py)
+        # Struttura per accumulare i momenti 
         class_moments = {k: {'m10': 0.0, 'm01': 0.0, 'm00': 0.0} for k in class_colors}
         
         if result.masks:
@@ -100,7 +100,7 @@ def run(model_path, conf_threshold):
             cv2.circle(frame, pt, 6, (0, 0, 0), -1)     # Bordo nero
             cv2.circle(frame, pt, 4, (255, 0, 0), -1)   # Centro rosso
 
-        # Logica Fall Detection (identica a test.py)
+        # Logica Fall Detection
         status_text = "WAITING..."
         status_color = (200, 200, 200) # Grigio
 

@@ -22,9 +22,6 @@ def run_video(model_path, video_path, conf_threshold):
 
     print(f"Apertura video: {video_path}")
     cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print("Errore: Impossibile aprire il video.")
-        return
 
     print("Avvio elaborazione video. Premi 'q' per uscire anticipatamente.")
 
@@ -41,9 +38,6 @@ def run_video(model_path, video_path, conf_threshold):
 
     while True:
         ret, frame = cap.read()
-        if not ret:
-            print("Fine del video o errore lettura frame.")
-            break
 
         # Inferenza YOLO
         results = model.predict(frame, conf=conf_threshold, verbose=False)
@@ -53,6 +47,10 @@ def run_video(model_path, video_path, conf_threshold):
         overlay = frame.copy()
         
         # Struttura per accumulare i momenti
+        # È un dizionario che contiene id della classe e un altro dizionario dei momenti
+        # m10 -> momento del primo ordine lungo x
+        # m01 -> momento del primo ordine lungo y
+        # m00 -> momento del primo ordine lungo 0
         class_moments = {k: {'m10': 0.0, 'm01': 0.0, 'm00': 0.0} for k in class_colors}
         
         if result.masks:
@@ -86,7 +84,7 @@ def run_video(model_path, video_path, conf_threshold):
                 cY = int(m['m01'] / m['m00'])
                 final_centroids[cid] = (cX, cY)
 
-        # Blending trasparenza
+        # Disegno overlay di segmentazione
         frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0)
 
         # Disegno skeleton: Testa(0) -> Torso(2) -> Gambe(3) -> Piedi(4)
