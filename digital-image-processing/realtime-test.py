@@ -15,11 +15,23 @@ def run(model_path, conf_threshold):
         print(f"Errore caricamento modello: {e}")
         return
 
-    # Apre la webcam (indice 0 di solito è la webcam integrata)
+    # Apre la webcam
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
         print("Errore: Impossibile aprire la webcam.")
         return
+
+    # Inizializzazione Background Subtractor (MOG2) per isolare i pixel in movimento
+    backSub = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=50, detectShadows=False)
+    # Kernel per le operazioni morfologiche (pulizia della maschera)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+
+    # Variabili per il calcolo FPS
+    prev_time = time.time()
+    fps_smooth = 0.0
+
+    # Cache dell'ultima Bounding Box di movimento valida
+    last_bbox = None
 
     print("Avvio webcam. Premi 'q' per uscire.")
 
@@ -32,6 +44,8 @@ def run(model_path, conf_threshold):
         4: (128, 0, 128)    # Viola (Piedi)
     }
 
+    cv2.namedWindow('YOLO Real Time Fall Detection', cv2.WINDOW_NORMAL)
+
     prev_frame_time = 0
     new_frame_time = 0
 
@@ -41,19 +55,57 @@ def run(model_path, conf_threshold):
             print("Errore lettura frame.")
             break
 
-        new_frame_time = time.time()
-        fps = 1 / (new_frame_time - prev_frame_time) if prev_frame_time != 0 else 0
-        prev_frame_time = new_frame_time
+         # --- 1. MOTION DETECTION E CALCOLO ROI ---
+        fgMask = backSub.apply(frame)
+        
+        # Pulizia morfologica per rimuovere rumore (es. sfarfallio della luce)
+        fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_OPEN, kernel)
+        fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_CLOSE, kernel)
 
-        # Inferenza YOLO
-        # verbose=False evita di stampare log per ogni frame
-        results = model.predict(frame, conf=conf_threshold, verbose=False)
+        # Trova i contorni degli oggetti in movimento
+        contours, _ = cv2.findContours(fgMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        min_x, min_y = frame.shape[1], frame.shape[0]
+        max_x, max_y = 0, 0
+        motion_detected = False
+
+        # Calcola un'unica Bounding Box che racchiuda tutto il movimento significativo
+        for contour in contours:
+            if cv2.contourArea(contour) > 500:  # Soglia area per scartare piccoli artefatti
+                x, y, w, h = cv2.boundingRect(contour)
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x + w)
+                max_y = max(max_y, y + h)
+                motion_detected = True
+
+        if motion_detected:
+            # Aggiungiamo un padding dinamico per non tagliare parti del corpo sui bordi
+            pad = 50
+            min_x = max(0, min_x - pad)
+            min_y = max(0, min_y - pad)
+            max_x = min(frame.shape[1], max_x + pad)
+            max_y = min(frame.shape[0], max_y + pad)
+            last_bbox = (min_x, min_y, max_x, max_y)
+        elif last_bbox is None:
+            # Fallback iniziale se non c'è ancora stato alcun movimento
+            last_bbox = (0, 0, frame.shape[1], frame.shape[0])
+
+        x1, y1, x2, y2 = last_bbox
+        
+        # Estrazione della Region of Interest (ROI)
+        roi = frame[y1:y2, x1:x2]
+
+        # Disegno la BBox del tracking movimento per debug visuale
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2, lineType=cv2.LINE_AA)
+        cv2.putText(frame, "Motion ROI", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+        # --- 2. INFERENZA YOLO (SOLO SULLA ROI) ---
+        # N.B. YOLO riceve solo la porzione ritagliata, molto più piccola e priva di background
+        results = model.predict(roi, conf=conf_threshold, verbose=False)
         result = results[0]
 
-        # Copia del frame per creare l'overlay delle maschere
         overlay = frame.copy()
-        
-        # Struttura per accumulare i momenti (come in test.py)
         class_moments = {k: {'m10': 0.0, 'm01': 0.0, 'm00': 0.0} for k in class_colors}
         
         if result.masks:
@@ -64,43 +116,42 @@ def run(model_path, conf_threshold):
                 cls_id = classes[i]
                 color = class_colors.get(cls_id, (200, 200, 200))
                 
-                # Disegna maschera piena sull'overlay
-                pts = np.array(poly, np.int32).reshape((-1, 1, 2))
-                cv2.fillPoly(overlay, [pts], color)
-                
-                # Calcola momenti per i centroidi
-                M = cv2.moments(pts)
-                if M["m00"] != 0:
-                    if cls_id in class_moments:
-                        class_moments[cls_id]['m10'] += M["m10"]
-                        class_moments[cls_id]['m01'] += M["m01"]
-                        class_moments[cls_id]['m00'] += M["m00"]
+                if len(poly) > 0:
+                    # TRASLAZIONE DEI PUNTI: Mappa le coordinate YOLO (relative alla ROI) 
+                    # nel sistema di riferimento del frame originale
+                    poly_shifted = poly + np.array([x1, y1])
+                    
+                    pts = np.array(poly_shifted, np.int32).reshape((-1, 1, 2))
+                    cv2.fillPoly(overlay, [pts], color)
+                    
+                    M = cv2.moments(pts)
+                    if M["m00"] != 0:
+                        if cls_id in class_moments:
+                            class_moments[cls_id]['m10'] += M["m10"]
+                            class_moments[cls_id]['m01'] += M["m01"]
+                            class_moments[cls_id]['m00'] += M["m00"]
 
-        # Calcolo centroidi unici per classe (escludendo braccia come in test.py)
         final_centroids = {}
         for cid, m in class_moments.items():
-            if cid == 1: # Skip braccia per il calcolo dello scheletro
+            if cid == 1:
                 continue
             if m['m00'] != 0:
                 cX = int(m['m10'] / m['m00'])
                 cY = int(m['m01'] / m['m00'])
                 final_centroids[cid] = (cX, cY)
 
-        # Blending trasparenza (sovrappone le maschere colorate all'immagine originale)
         frame = cv2.addWeighted(overlay, 0.5, frame, 0.5, 0)
 
-        # Disegno skeleton: Testa(0) -> Torso(2) -> Gambe(3) -> Piedi(4)
         skeleton_links = [(0, 2), (2, 3), (3, 4)]
         for cls_a, cls_b in skeleton_links:
             if cls_a in final_centroids and cls_b in final_centroids:
                 cv2.line(frame, final_centroids[cls_a], final_centroids[cls_b], (255, 255, 255), 2)
 
-        # Disegno centroidi
         for pt in final_centroids.values():
-            cv2.circle(frame, pt, 6, (0, 0, 0), -1)     # Bordo nero
-            cv2.circle(frame, pt, 4, (255, 0, 0), -1)   # Centro rosso
+            cv2.circle(frame, pt, 6, (0, 0, 0), -1)    
+            cv2.circle(frame, pt, 4, (255, 0, 0), -1)  
 
-        # Logica Fall Detection (identica a test.py)
+        # --- LOGICA FALL DETECTION ---
         status_text = "WAITING..."
         status_color = (200, 200, 200) # Grigio
 
@@ -132,13 +183,28 @@ def run(model_path, conf_threshold):
             else:
                 status_text = "NO FALL DETECTED"
                 status_color = (0, 255, 0) # Verde
+        else:
+            status_text = "INSUFFICIENT DATA"
+            status_color = (0, 255, 255)
 
-        # Visualizzazione fps
-        cv2.putText(frame, f"FPS: {int(fps)}", (frame.shape[1] - 180, 50), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, status_color, 2)
 
-        cv2.putText(frame, status_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
-        cv2.imshow('YOLO Real-time Fall Detection', frame)
+         # --- 3. CALCOLO E STAMPA FPS ---
+        curr_time = time.time()
+        # Tempo trascorso in secondi per compiere un iterazione intera
+        time_diff = curr_time - prev_time 
+        fps = 1.0 / time_diff if time_diff > 0 else 0.0
+        prev_time = curr_time
+
+        # Calcolo Media Mobile Esponenziale (EMA) per evitare fluttuazioni eccessive a schermo
+        if fps_smooth == 0.0:
+            fps_smooth = fps
+        else:
+            fps_smooth = 0.9 * fps_smooth + 0.1 * fps 
+
+        cv2.putText(frame, f"FPS: {fps_smooth:.1f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+
+        cv2.imshow('YOLO Real Time Fall Detection', frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

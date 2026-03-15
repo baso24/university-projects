@@ -99,7 +99,7 @@ class BodyPartDatasetPreprocessor:
                         mask_crop = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
                         
                         if mask_crop is not None:
-                            # Gestione canali (Alpha o Grayscale)
+                            # Gestione canali
                             if len(mask_crop.shape) > 2:
                                 mask_crop = mask_crop[:, :, 3] if mask_crop.shape[2] == 4 else cv2.cvtColor(mask_crop, cv2.COLOR_BGR2GRAY)
                             

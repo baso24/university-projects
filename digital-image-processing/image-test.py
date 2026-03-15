@@ -59,13 +59,8 @@ def test_specific_image(model_path, image_name, conf_threshold):
     show_segmentation_analysis(results[0], f"Segmentation analysis: {image_name}")
 
 def show_result(result, title):
-    # Carica l'immagine originale
-    orig_img = cv2.imread(result.path)
-    orig_img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
-
     # Immagine originale
-    orig_img = result.orig_img
-    orig_img_rgb = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
+    orig_img_rgb = cv2.cvtColor(result.orig_img, cv2.COLOR_BGR2RGB)
 
     # Plot annotato da YOLO (in BGR)
     annotated_frame = result.plot()
@@ -88,7 +83,8 @@ def show_result(result, title):
     axes[1].set_xticks([])
     axes[1].set_yticks([])
     axes[1].set_frame_on(False)
-    axes[1].set_xlabel(title, fontsize=10)
+
+    fig.suptitle(title)
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
@@ -169,8 +165,7 @@ def show_segmentation_analysis(result, title):
     ax1.set_xticks([])
     ax1.set_yticks([])
     ax1.set_frame_on(False)
-    # Il titolo con il nome del file va sotto l'immagine
-    ax1.set_xlabel(title.replace("Segmentation analysis: ", ""), fontsize=12)
+    ax1.set_xlabel(title.replace("Segmentation analysis: ", ""), fontsize=10)
 
     legend_elements = []
     sorted_ids = sorted([k for k in class_colors.keys() if k in classes])
@@ -206,7 +201,7 @@ def show_segmentation_analysis(result, title):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
-def is_fallen_check(p1, p2):
+def is_fallen(p1, p2):
     # Se la distanza verticale è minore di quella orizzontale -> Fall detection
     return abs(p1[1] - p2[1]) < abs(p1[0] - p2[0])
 
@@ -214,22 +209,22 @@ def fall_detection(centroids):
     fall_detected = False
     pair_found = False
 
-    # Case 1: Testa (0) e Torso (2)
+    # Caso 1: Testa (0) e Torso (2)
     if 0 in centroids and 2 in centroids:
         pair_found = True
-        if is_fallen_check(centroids[0], centroids[2]):
+        if is_fallen(centroids[0], centroids[2]):
             fall_detected = True
 
-    # Case 2: Testa (0) e Gambe (3)
+    # Caso 2: Testa (0) e Gambe (3)
     if not fall_detected and 0 in centroids and 3 in centroids:
         pair_found = True
-        if is_fallen_check(centroids[0], centroids[3]):
+        if is_fallen(centroids[0], centroids[3]):
             fall_detected = True
 
-    # Case 3: Torso (2) e Gambe (3)
+    # Caso 3: Torso (2) e Gambe (3)
     if not fall_detected and 2 in centroids and 3 in centroids:
         pair_found = True
-        if is_fallen_check(centroids[2], centroids[3]):
+        if is_fallen(centroids[2], centroids[3]):
             fall_detected = True
 
     return fall_detected, pair_found
