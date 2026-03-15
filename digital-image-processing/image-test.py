@@ -81,7 +81,6 @@ def show_result(result, title):
     axes[0].set_xticks([])
     axes[0].set_yticks([])
     axes[0].set_frame_on(False)
-    axes[0].set_xlabel(result.path, fontsize=10)
 
     # Mostra il risultato dell'annotazione
     axes[1].imshow(annotated_frame_rgb)
