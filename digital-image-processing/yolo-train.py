@@ -242,7 +242,7 @@ if __name__ == "__main__":
     
     # Configurazione training
     SUBSET_RATIO = 0.1    # Percentuale dataset da usare (0.05 = 5%)
-    EPOCHS = 300           # Numero di epoche
+    EPOCHS = 300          # Numero di epoche
     BATCH_SIZE = 32       # Dimensione batch
     IMG_SIZE = 416        # Dimensione immagini
 
