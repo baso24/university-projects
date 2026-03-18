@@ -3,7 +3,6 @@ import numpy as np
 from ultralytics import YOLO
 import time
 import os
-
 import numpy as np
 from collections import deque
 
@@ -20,8 +19,9 @@ class PosturalAnomalyDetector:
     def __init__(self, calibration_frames, anomaly_thresh, time_window):
         self.calibration_frames = calibration_frames
         self.anomaly_thresh = anomaly_thresh
-        # buffer circolare per tenere traccia degli ultimi N frame per rilevare sequenze di anomalie
-        self.anomaly_buffer = deque(maxlen=time_window)
+        self.time_window = time_window
+        # Usiamo una lista semplice invece di una deque per la finestra temporale
+        self.anomaly_buffer = []
         
         self.calibration_features = [] # Lista per accumulare i vettori di feature durante la fase di calibrazione
         self.mean = None # Vettore medio dei feature calcolato durante la calibrazione
@@ -70,7 +70,10 @@ class PosturalAnomalyDetector:
         
         # Se non c'è nessuna coppia di detection utile, saltiamo il frame
         if valid_count == 0:
-            self.anomaly_buffer.append(False) # Consideriamo il frame come "non anomalo" per non falsare la finestra temporale, ma in realtà è un dato mancante
+            # Aggiungiamo un valore al buffer e lo manteniamo della dimensione corretta
+            self.anomaly_buffer.append(False)
+            if len(self.anomaly_buffer) > self.time_window:
+                self.anomaly_buffer.pop(0) # Rimuovi l'elemento più vecchio
             status = "DATI INSUFFICIENTI"
             return False, status, 0.0
 
@@ -84,7 +87,7 @@ class PosturalAnomalyDetector:
                     X = np.array(self.calibration_features)
                     self.mean = np.mean(X, axis=0)
                     self.cov = np.cov(X, rowvar=False)
-                    # self.cov += np.eye(self.cov.shape[0]) * 1e-4 # Regolarizzazione
+                    self.cov += np.eye(self.cov.shape[0]) * 1e-4 # Regolarizzazione
                     
                     self.is_calibrated = True
                     
@@ -122,11 +125,15 @@ class PosturalAnomalyDetector:
 
         # Un frame è considerato anomalo se la distanza di Mahalanobis normalizzata supera la soglia definita
         is_anomalous = mahalanobis_distance_normalized > self.anomaly_thresh
+        
+        # Aggiungiamo il risultato al buffer e manteniamo la dimensione della finestra
         self.anomaly_buffer.append(is_anomalous)
+        if len(self.anomaly_buffer) > self.time_window:
+            self.anomaly_buffer.pop(0) # Rimuovo l'elemento più vecchio
 
         # Contiamo quante anomalie ci sono nella finestra temporale e se superano una certa percentuale (es. 70%) allora segnaliamo una possibile caduta
         anomalies_in_window = sum(self.anomaly_buffer)
-        fall_detected = anomalies_in_window >= (self.anomaly_buffer.maxlen * 0.7)
+        fall_detected = anomalies_in_window >= (self.time_window * 0.7)
 
         if fall_detected:
             status = "CADUTA RILEVATA!"
