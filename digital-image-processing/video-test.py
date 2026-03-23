@@ -188,8 +188,7 @@ def run_video(model_path, video_path, conf_threshold):
 
     cv2.namedWindow('YOLO Video Fall Detection', cv2.WINDOW_NORMAL)
 
-    # 100 frame di calibrazione a ~30fps sono circa 3 secondi di "postura normale"
-    anomaly_detector = PosturalAnomalyDetector(baseline_frames=100, anomaly_thresh=2, time_window=15)
+    anomaly_detector = PosturalAnomalyDetector(calibration_frames=100, anomaly_thresh=5, time_window=15)
 
     while True:
         ret, frame = cap.read()
@@ -365,7 +364,15 @@ def run_video(model_path, video_path, conf_threshold):
 
 if __name__ == "__main__":
     MODEL_PATH = 'runs/segment/body_parts12/weights/best.pt'
-    VIDEO_PATH_1 = 'digital-image-processing/test-dataset/videos/video_caduta_1.avi'
+    VIDEOS_DIR = 'digital-image-processing/test-dataset/videos/'
 
     CONF_THRESHOLD = 0.2
-    run_video(MODEL_PATH, VIDEO_PATH_1, CONF_THRESHOLD)
+    
+    if os.path.exists(VIDEOS_DIR):
+        for file in os.listdir(VIDEOS_DIR):
+            if file.lower().endswith(('.avi', '.mp4')):
+                video_path = os.path.join(VIDEOS_DIR, file)
+                print(f"\nAvvio analisi per il video: {file} ---")
+                run_video(MODEL_PATH, video_path, CONF_THRESHOLD)
+    else:
+        print(f"Errore: La cartella '{VIDEOS_DIR}' non esiste.")
