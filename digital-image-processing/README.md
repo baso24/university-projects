@@ -1,9 +1,9 @@
-<h3>Digital Image Processing</h3>
+<h2>Digital Image Processing</h2>
 <p><b>Title:</b> Pose Estimation and Fall Detection</p>
 <p><b>Description: </b>Implementation of a training of Yolo-seg network only for certain parts of the human body (head, torso, arms, legs and feet) and study of their mutual positions to understand whether there has been a fall or not.</p>
 <br>
 
-<p><b>Project structure:</b></p>
+<h3>Project structure:</h3>
 <p>yolo-train.py is the file we started with to train our yolo segmentation network. The network learns to segment only five body parts: head, torso, arms, legs, and feet. The dataset we used to achieve this is the CIHP Dataset.</p>
 <p>The results of the various training phases are located in the /runs folder. The dataset is located in the /assets folder, which for obvious reasons is not available in the repository.</p>
 <p>The link to the dataset is: <a>https://datasetninja.com/cihp</a>
