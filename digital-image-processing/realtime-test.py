@@ -46,9 +46,6 @@ def run(model_path, conf_threshold):
 
     cv2.namedWindow('YOLO Real Time Fall Detection', cv2.WINDOW_NORMAL)
 
-    prev_frame_time = 0
-    new_frame_time = 0
-
     while True:
         ret, frame = cap.read()
         if not ret:

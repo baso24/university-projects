@@ -3,8 +3,6 @@ import numpy as np
 from ultralytics import YOLO
 import time
 import os
-import numpy as np
-from collections import deque
 
 # Classe per rilevare anomalie posturali basate sui versori normalizzati tra i centroidi delle perti del corpo rilevate
 # Si prendono in considerazione 3 versori: Testa->Busto, Testa->Gambe, Busto->Gambe
@@ -35,8 +33,8 @@ class PosturalAnomalyDetector:
         if 0 in centroids and 2 in centroids:
             distance = np.array(centroids[2]) - np.array(centroids[0])
             norm = np.linalg.norm(distance)
-            verser = distance / norm
-            features.extend(verser.tolist())
+            versor = distance / norm
+            features.extend(versor.tolist())
         else:
             features.extend([np.nan, np.nan]) # Uso NaN per i dati mancanti
         
@@ -144,11 +142,6 @@ class PosturalAnomalyDetector:
 
         return fall_detected, status, mahalanobis_distance_normalized
 
-# Logica di fal detection molto semplice usata in precedenza
-def is_fallen(p1, p2):
-    # Se la distanza verticale è minore di quella orizzontale -> Fall detection
-    return abs(p1[1] - p2[1]) < abs(p1[0] - p2[0])
-
 def run_video(model_path, video_path, conf_threshold):
     print(f"Caricamento modello: {model_path}")
     try:
@@ -166,16 +159,16 @@ def run_video(model_path, video_path, conf_threshold):
 
     print("Avvio elaborazione video. Premi 'q' per uscire anticipatamente.")
 
-    # Inizializzazione Background Subtractor (MOG2) per isolare i pixel in movimento
+    # Inizializzazione background subtractor perchè voglio isolare i pixel in movimento
     backSub = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=50, detectShadows=False)
-    # Kernel per le operazioni morfologiche (pulizia della maschera)
+    # kernel per pulizia della maschera in movimento a forma di ellisse
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
 
     # Variabili per il calcolo FPS
     prev_time = time.time()
     fps_smooth = 0.0
 
-    # Cache dell'ultima Bounding Box di movimento valida
+    # ultima bounding box valida del movimento
     last_bbox = None
 
     class_colors = {
@@ -188,6 +181,7 @@ def run_video(model_path, video_path, conf_threshold):
 
     cv2.namedWindow('YOLO Video Fall Detection', cv2.WINDOW_NORMAL)
 
+    # Inizializzazione del rilevatore di anomalie posturali
     anomaly_detector = PosturalAnomalyDetector(calibration_frames=100, anomaly_thresh=5, time_window=15)
 
     while True:
@@ -195,10 +189,10 @@ def run_video(model_path, video_path, conf_threshold):
         if not ret:
             break
 
-        # --- 1. MOTION DETECTION E CALCOLO ROI ---
+        # Motion detection e tracking solo sui pixel in movimento per isolare la persona dal background
         fgMask = backSub.apply(frame)
         
-        # Pulizia morfologica per rimuovere rumore (es. sfarfallio della luce)
+        # Pulizia morfologica per rimuovere rumore
         fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_OPEN, kernel)
         fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_CLOSE, kernel)
 
@@ -209,9 +203,9 @@ def run_video(model_path, video_path, conf_threshold):
         max_x, max_y = 0, 0
         motion_detected = False
 
-        # Calcola un'unica Bounding Box che racchiuda tutto il movimento significativo
+        # Calcola un'unica bounding box che racchiude tutto il movimento che vedo
         for contour in contours:
-            if cv2.contourArea(contour) > 500:  # Soglia area per scartare piccoli artefatti
+            if cv2.contourArea(contour) > 500:  # Soglia area
                 x, y, w, h = cv2.boundingRect(contour)
                 min_x = min(min_x, x)
                 min_y = min(min_y, y)
@@ -220,7 +214,7 @@ def run_video(model_path, video_path, conf_threshold):
                 motion_detected = True
 
         if motion_detected:
-            # Aggiungiamo un padding dinamico per non tagliare parti del corpo sui bordi
+            # Aggiungiamo un padding per essere sicuri di includere tutta la persona
             pad = 50
             min_x = max(0, min_x - pad)
             min_y = max(0, min_y - pad)
@@ -228,19 +222,18 @@ def run_video(model_path, video_path, conf_threshold):
             max_y = min(frame.shape[0], max_y + pad)
             last_bbox = (min_x, min_y, max_x, max_y)
         elif last_bbox is None:
-            # Fallback iniziale se non c'è ancora stato alcun movimento
+            # Fallback iniziale se non c'è ancora stato alcun movimento (boundinh box è l'intero frame)
             last_bbox = (0, 0, frame.shape[1], frame.shape[0])
 
         x1, y1, x2, y2 = last_bbox
         
-        # Estrazione della Region of Interest (ROI)
+        # Estrazione della regione di interesse
         roi = frame[y1:y2, x1:x2]
 
-        # Disegno la BBox del tracking movimento per debug visuale
+        # Disegno la bounding box del movimento
         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2, lineType=cv2.LINE_AA)
 
-        # --- 2. INFERENZA YOLO (SOLO SULLA ROI) ---
-        # N.B. YOLO riceve solo la porzione ritagliata, molto più piccola e priva di background
+        # Posso applicare YOLO solo sulla regione di interesse
         results = model.predict(roi, conf=conf_threshold, verbose=False)
         result = results[0]
 
@@ -256,8 +249,7 @@ def run_video(model_path, video_path, conf_threshold):
                 color = class_colors.get(cls_id, (200, 200, 200))
                 
                 if len(poly) > 0:
-                    # TRASLAZIONE DEI PUNTI: Mappa le coordinate YOLO (relative alla ROI) 
-                    # nel sistema di riferimento del frame originale
+                    # Traslazione dei poligoni segmentati dalla roi alle coordinate globali del frame
                     poly_shifted = poly + np.array([x1, y1])
                     
                     pts = np.array(poly_shifted, np.int32).reshape((-1, 1, 2))
@@ -290,38 +282,8 @@ def run_video(model_path, video_path, conf_threshold):
             cv2.circle(frame, pt, 6, (0, 0, 0), -1)    
             cv2.circle(frame, pt, 4, (255, 0, 0), -1)  
 
-        # --- VECCHIA LOGICA FALL DETECTION ---
-        """"
-        fall_detected = False
-        pair_found = False
-
-        if 0 in final_centroids and 2 in final_centroids:
-            pair_found = True
-            if is_fallen(final_centroids[0], final_centroids[2]): fall_detected = True
-
-        if not fall_detected and 0 in final_centroids and 3 in final_centroids:
-            pair_found = True
-            if is_fallen(final_centroids[0], final_centroids[3]): fall_detected = True
-
-        if not fall_detected and 2 in final_centroids and 3 in final_centroids:
-            pair_found = True
-            if is_fallen(final_centroids[2], final_centroids[3]): fall_detected = True
-
-        if pair_found:
-            if fall_detected:
-                status_text = "FALL DETECTED!"
-                status_color = (0, 0, 255)
-            else:
-                status_text = "NO FALL DETECTED"
-                status_color = (0, 255, 0)
-        else:
-            status_text = "INSUFFICIENT DATA"
-            status_color = (0, 255, 255)
-
-        cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, status_color, 2)
-        """""
-
-        # --- LOGICA FALL DETECTION (ANOMALY DETECTION) ---
+        # Logica fall detection basata sui versori normalizzati tra i centroidi delle parti del corpo rilevate
+        # Chiamo l'oggetto anomaly_detector e gli faccio processare i centroidi che ho ottenuto da YOLO
         fall_detected, status_text, mahalanobis_distance_score = anomaly_detector.process_frame(final_centroids)
 
         if fall_detected:
@@ -339,19 +301,15 @@ def run_video(model_path, video_path, conf_threshold):
         if anomaly_detector.is_calibrated:
             cv2.putText(frame, f"Anomaly Score: {mahalanobis_distance_score:.2f}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-        # --- CALCOLO FPS ---
+        # Calcolo fps
         curr_time = time.time()
-        # Tempo trascorso in secondi per compiere un iterazione intera
         time_diff = curr_time - prev_time 
         fps = 1.0 / time_diff if time_diff > 0 else 0.0
         prev_time = curr_time
-
-        # Calcolo Media Mobile Esponenziale (EMA) per evitare fluttuazioni eccessive a schermo
         if fps_smooth == 0.0:
             fps_smooth = fps
         else:
             fps_smooth = 0.9 * fps_smooth + 0.1 * fps 
-
         cv2.putText(frame, f"FPS: {fps_smooth:.1f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
         cv2.imshow('YOLO Video Fall Detection', frame)
@@ -374,5 +332,3 @@ if __name__ == "__main__":
                 video_path = os.path.join(VIDEOS_DIR, file)
                 print(f"\nAvvio analisi per il video: {file} ---")
                 run_video(MODEL_PATH, video_path, CONF_THRESHOLD)
-    else:
-        print(f"Errore: La cartella '{VIDEOS_DIR}' non esiste.")

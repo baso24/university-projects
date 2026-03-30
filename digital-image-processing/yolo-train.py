@@ -1,8 +1,3 @@
-"""
-Progetto: Pose Estimation and Fall Detection - Training
-Autore: Valentino Basili, Giovanni Paolo Maugeri
-"""
-
 import json
 import base64
 import zlib
@@ -307,7 +302,7 @@ if __name__ == "__main__":
     path_to_best_model = 'yolo26n-seg.pt' 
 
     # Cerca l'ultimo modello best.pt disponibile nelle run precedenti
-    # Disabilitato per il momento
+    # Disabilitato
     """
     if runs_path.exists():
         # Ottieni sottocartelle ordinate per data di modifica (più recenti prima)
