@@ -6,8 +6,7 @@
 <h3>Project structure:</h3>
 <p>yolo-train.py is the file we started with to train our yolo segmentation network. The network learns to segment only five body parts: head, torso, arms, legs, and feet. The dataset we used to achieve this is the CIHP Dataset.</p>
 <p>The results of the various training phases are located in the /runs folder. The dataset is located in the /assets folder, which for obvious reasons is not available in the repository.</p>
-<p>The link to the dataset is: <a>https://datasetninja.com/cihp</a>
-The yolo-seg model we used is YOLO26n-seg: <a>https://docs.ultralytics.com/it/tasks/segment/#models</a></p>
+<p>The link to the dataset is: <a>https://datasetninja.com/cihp</a>.The yolo-seg model we used is YOLO26n-seg: <a>https://docs.ultralytics.com/it/tasks/segment/#models</a></p>
 <br>
 
 <p>image-test.py and realtime-test.py test our segmentation model on images and real-time video recorded by a device camera. Within these two files, the logic used for fall detection is a simple check of the relative positions of the centroids.</p>
@@ -26,12 +25,18 @@ The yolo-seg model we used is YOLO26n-seg: <a>https://docs.ultralytics.com/it/ta
 <br>
 
 <p><b>More details on the implementation:</b></p>
-<p>To optimize computational efficiency and structural robustness, the inference pipeline introduces several advanced techniques:</p>
-<p>- <b>Dynamic ROI via Background Subtraction:</b> Instead of processing the entire frame with YOLO, a Gaussian Mixture-based Background/Foreground Segmentation algorithm (MOG2) is coupled with morphological operations (opening and closing) to isolate moving pixels. YOLO inference is then strictly restricted to the resulting dynamic Region of Interest (ROI), significantly reducing the computational load.</p>
-<p>- <b>Robust Mahalanobis Normalization:</b> To handle partial occlusions and missing detections seamlessly, the Mahalanobis distance is computed on dynamically extracted sub-matrices corresponding only to the visible features. The spatial distance is then normalized by the active degrees of freedom:
-$$D_{norm} = \sqrt{\frac{(\mathbf{x}_{sub} - \boldsymbol{\mu}_{sub})^T \boldsymbol{\Sigma}_{sub}^{-1} (\mathbf{x}_{sub} - \boldsymbol{\mu}_{sub})}{N_{valid}}}$$
-This ensures that the anomaly score remains mathematically consistent regardless of how many body vectors are currently tracked.</p>
-<p>- <b>Covariance Regularization & Class Filtering:</b> While the network segments 5 distinct body parts, the arms are explicitly filtered out from the postural analysis to reduce noise caused by rapid, non-postural limb movements. Furthermore, during the calibration phase, a regularization term is added to the main diagonal of the covariance matrix to guarantee its invertibility and prevent numerical instability during the sub-matrix inversion step.</p>
+<p>- Instead of processing the entire frame with YOLO we try to isolate moving pixels. YOLO inference is then strictly restricted to the resulting dynamic Region of Interest (ROI), significantly reducing the computational load.</p>
+<p>- To handle partial occlusions the Mahalanobis distance is computed on dynamically extracted sub-matrices corresponding only to the visible features. This ensures that the anomaly score remains mathematically consistent regardless of how many body vectors are currently tracked.</p>
 
+<br>
+
+<p><b>Final results and conclusions:</b></p>
+<p>Most of the quality of the results is due to the segmentation network.
+
+Although our training was limited due to the computational power we had available, some results are very interesting and are very good at identifying whether a fall occurred or not.
+
+The classifier does not perform very well due to a small training dataset and the limited information a simple fully connected network can learn from the centroid positions alone.
+
+The most robust model is clearly the one used in the video-test.py script, although it requires a calibration process.</p>
 
 
