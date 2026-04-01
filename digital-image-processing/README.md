@@ -34,9 +34,9 @@ The classifier does not perform very well due to a small training dataset and th
 
 The most robust model is clearly the one used in the `video-test.py` script, although it requires a calibration process.
 
-**Demo:** [Link to a demo of the video-test.py script](https://drive.google.com/file/d/1ZGVnpFPsRR2WGCvzFTyD2hxMs8wFtQEc/view)
+**Demo of video-test.py:** [Link to a demo of the video-test.py script](https://drive.google.com/file/d/1ZGVnpFPsRR2WGCvzFTyD2hxMs8wFtQEc/view)
 
-**Results:**
+**Other results:**
 
 <table>
   <tr>
