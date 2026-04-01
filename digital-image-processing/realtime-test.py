@@ -52,10 +52,10 @@ def run(model_path, conf_threshold):
             print("Errore lettura frame.")
             break
 
-         # --- 1. MOTION DETECTION E CALCOLO ROI ---
+         # Calcolo ROI
         fgMask = backSub.apply(frame)
         
-        # Pulizia morfologica per rimuovere rumore (es. sfarfallio della luce)
+        # Pulizia morfologica per rimuovere rumore
         fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_OPEN, kernel)
         fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_CLOSE, kernel)
 
@@ -68,7 +68,7 @@ def run(model_path, conf_threshold):
 
         # Calcola un'unica Bounding Box che racchiuda tutto il movimento significativo
         for contour in contours:
-            if cv2.contourArea(contour) > 500:  # Soglia area per scartare piccoli artefatti
+            if cv2.contourArea(contour) > 500: 
                 x, y, w, h = cv2.boundingRect(contour)
                 min_x = min(min_x, x)
                 min_y = min(min_y, y)
@@ -90,15 +90,14 @@ def run(model_path, conf_threshold):
 
         x1, y1, x2, y2 = last_bbox
         
-        # Estrazione della Region of Interest (ROI)
+        # Estrazione ROI
         roi = frame[y1:y2, x1:x2]
 
         # Disegno la BBox del tracking movimento per debug visuale
         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2, lineType=cv2.LINE_AA)
         cv2.putText(frame, "Motion ROI", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-        # --- 2. INFERENZA YOLO (SOLO SULLA ROI) ---
-        # N.B. YOLO riceve solo la porzione ritagliata, molto più piccola e priva di background
+        # Inferenza yolo solo fu frame ritagliato
         results = model.predict(roi, conf=conf_threshold, verbose=False)
         result = results[0]
 
@@ -114,8 +113,7 @@ def run(model_path, conf_threshold):
                 color = class_colors.get(cls_id, (200, 200, 200))
                 
                 if len(poly) > 0:
-                    # TRASLAZIONE DEI PUNTI: Mappa le coordinate YOLO (relative alla ROI) 
-                    # nel sistema di riferimento del frame originale
+                    # Mappa le coordinate YOLO nel sistema di riferimento del frame originale
                     poly_shifted = poly + np.array([x1, y1])
                     
                     pts = np.array(poly_shifted, np.int32).reshape((-1, 1, 2))
@@ -148,7 +146,7 @@ def run(model_path, conf_threshold):
             cv2.circle(frame, pt, 6, (0, 0, 0), -1)    
             cv2.circle(frame, pt, 4, (255, 0, 0), -1)  
 
-        # --- LOGICA FALL DETECTION ---
+        # Fall detection
         status_text = "WAITING..."
         status_color = (200, 200, 200) # Grigio
 
@@ -186,7 +184,7 @@ def run(model_path, conf_threshold):
 
         cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, status_color, 2)
 
-         # --- 3. CALCOLO E STAMPA FPS ---
+        # Calcolo fps
         curr_time = time.time()
         # Tempo trascorso in secondi per compiere un iterazione intera
         time_diff = curr_time - prev_time 
@@ -211,9 +209,9 @@ def run(model_path, conf_threshold):
 
 # ========================================== main ==========================================
 if __name__ == "__main__":
-    # Percorso del modello
+    # Percorso modello
     MODEL_PATH = 'runs/segment/body_parts11/weights/best.pt'
     
-    CONF_THRESHOLD = 0.4  # Soglia di confidenza
+    CONF_THRESHOLD = 0.4
     
     run(MODEL_PATH, CONF_THRESHOLD)
