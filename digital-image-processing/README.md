@@ -40,13 +40,13 @@ The most robust model is clearly the one used in the `video-test.py` script, alt
 
 <table>
   <tr>
-    <td align="center">
+    <td align="center" colspan="2">
       <img src="results/results.png" alt="Yolo-seg training results" width="100%"/>
       <br>
       <i>Yolo-seg training results</i>
     </td>
-    </tr>
-    <tr>
+  </tr>
+  <tr>
     <td align="center">
       <img src="results/test_caduta.png" alt="image-test.py demo" width="100%"/>
       <br>
@@ -69,14 +69,14 @@ The most robust model is clearly the one used in the `video-test.py` script, alt
       <br>
       <i>image-test.py demo</i>
     </td>
-    </tr>
-    <tr>
-    <td align="center">
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
       <img src="results/test_classificatore_caduta.png" alt="Classifier test" width="100%"/>
       <br>
       <i>Classifier test</i>
     </td>
-    </tr>
+  </tr>
 </table>
 
 *Authors: Valentino Basili, Giovanni Paolo Maugeri*
