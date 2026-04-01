@@ -41,38 +41,42 @@ The most robust model is clearly the one used in the `video-test.py` script, alt
 <table>
   <tr>
     <td align="center">
-      <img src="results/results.png" alt="Test 1" width="100%"/>
+      <img src="results/results.png" alt="Yolo-seg training results" width="100%"/>
       <br>
       <i>Yolo-seg training results</i>
     </td>
+    </tr>
+    <tr>
     <td align="center">
-      <img src="results/test_caduta.png" alt="Test 2" width="100%"/>
+      <img src="results/test_caduta.png" alt="image-test.py demo" width="100%"/>
       <br>
       <i>image-test.py demo</i>
     </td>
     <td align="center">
-      <img src="results/test_caduta_fall_detection.png" alt="Test 3" width="100%"/>
+      <img src="results/test_caduta_fall_detection.png" alt="image-test.py demo" width="100%"/>
       <br>
       <i>image-test.py demo</i>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="results/test_inpiedi.png" alt="Test 4" width="100%"/>
+      <img src="results/test_inpiedi.png" alt="image-test.py demo" width="100%"/>
       <br>
       <i>image-test.py demo</i>
     </td>
     <td align="center">
-      <img src="results/test_inpiedi_fall_detection.png" alt="Test 5" width="100%"/>
+      <img src="results/test_inpiedi_fall_detection.png" alt="image-test.py demo" width="100%"/>
       <br>
       <i>image-test.py demo</i>
     </td>
+    </tr>
+    <tr>
     <td align="center">
-      <img src="results/test_classificatore_caduta.png" alt="Test 6" width="100%"/>
+      <img src="results/test_classificatore_caduta.png" alt="Classifier test" width="100%"/>
       <br>
       <i>Classifier test</i>
     </td>
-  </tr>
+    </tr>
 </table>
 
 *Authors: Valentino Basili, Giovanni Paolo Maugeri*
