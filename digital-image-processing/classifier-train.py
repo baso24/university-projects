@@ -98,7 +98,7 @@ class FallDataset(Dataset):
 
         print(f"Elaborazione feature per {len(image_files)} immagini in {images_dir}...")
 
-        # Pre-calcolo delle feature (Inferenza YOLO una tantum)
+        # Calcolo delle feature per ogni immagine
         for i, img_file in enumerate(image_files):
             # Inferenza YOLO
             results = model.predict(source=str(img_file), conf=0.25, verbose=False)

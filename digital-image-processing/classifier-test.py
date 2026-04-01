@@ -149,7 +149,6 @@ def run_test(yolo_model_path, classifier_model_path, test_images_dir):
         annotated_img_rgb = cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB)
 
         # Disegno i centroidi
-        h, w = result.orig_shape
         for cid, coords in centroids_map.items():
             if coords:
                 cv2.circle(annotated_img_rgb, coords, 8, (255, 255, 255), -1)

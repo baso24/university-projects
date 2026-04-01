@@ -21,8 +21,6 @@ Finally, we have `video-test.py`, the most relevant file in the project, which a
 * Once the calibration phase is complete, we calculate an anomaly score, frame by frame, equivalent to the Mahalanobis distance between the frame versors and the model built during the calibration phase. The system works even if only one of the three versors is detected.
 * If the anomaly score exceeds a certain threshold (for example, 5), the frame is classified as suspicious. When 70% of the last frame window (for example, 15 frames) are suspicious, it is assumed that a crash occurred.
 
-**Demo:** [Link to a demo of the video-test.py script](https://drive.google.com/file/d/1ZGVnpFPsRR2WGCvzFTyD2hxMs8wFtQEc/view)
-
 ### More details on the implementation:
 * Instead of processing the entire frame with YOLO we try to isolate moving pixels. YOLO inference is then strictly restricted to the resulting dynamic Region of Interest (ROI), significantly reducing the computational load.
 * To handle partial occlusions the Mahalanobis distance is computed on dynamically extracted sub-matrices corresponding only to the visible features. This ensures that the anomaly score remains mathematically consistent regardless of how many body vectors are currently tracked.
@@ -35,5 +33,46 @@ Although our training was limited due to the computational power we had availabl
 The classifier does not perform very well due to a small training dataset and the limited information a simple fully connected network can learn from the centroid positions alone.
 
 The most robust model is clearly the one used in the `video-test.py` script, although it requires a calibration process.
+
+**Demo:** [Link to a demo of the video-test.py script](https://drive.google.com/file/d/1ZGVnpFPsRR2WGCvzFTyD2hxMs8wFtQEc/view)
+
+**Results:**
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="results/results.png" alt="Test 1" width="100%"/>
+      <br>
+      <i>Yolo-seg training results</i>
+    </td>
+    <td align="center">
+      <img src="results/test_caduta.png" alt="Test 2" width="100%"/>
+      <br>
+      <i>image-test.py demo</i>
+    </td>
+    <td align="center">
+      <img src="results/test_caduta_fall_detection.png" alt="Test 3" width="100%"/>
+      <br>
+      <i>image-test.py demo</i>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="results/test_inpiedi.png" alt="Test 4" width="100%"/>
+      <br>
+      <i>image-test.py demo</i>
+    </td>
+    <td align="center">
+      <img src="results/test_inpiedi_fall_detection.png" alt="Test 5" width="100%"/>
+      <br>
+      <i>image-test.py demo</i>
+    </td>
+    <td align="center">
+      <img src="results/test_classificatore_caduta.png" alt="Test 6" width="100%"/>
+      <br>
+      <i>Classifier test</i>
+    </td>
+  </tr>
+</table>
 
 *Authors: Valentino Basili, Giovanni Paolo Maugeri*
