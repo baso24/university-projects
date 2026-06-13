@@ -7,6 +7,11 @@
 <p><b>Description: </b>Implementation of a training of Yolo-seg network only for certain parts of the human body (head, torso, arms, legs and feet) and study of their mutual positions to understand whether there has been a fall or not.</p>
 <br>
 
+<h3>Artificial Intelligence</h3>
+<p><b>Title:</b> Hybrid neurosymbolic system for solving the 15-puzzle</p>
+<p><b>Description: </b></p>
+<br>
+
 
 <h3>Neural Networks</h3>
 <p><b>Title: </b>Conditional GAN on CelebA dataset with GUI</p>
