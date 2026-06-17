@@ -13,9 +13,9 @@ This project implements a hybrid neuro-symbolic system designed to solve the 8-p
 * **`dataset.py`**: Handles data loading and preprocessing for PyTorch, including the specific one-hot encoding representation of the board states.
 
 ### 3. Neural Network
-* **`model.py`**: Defines the architecture of the Feed-Forward Neural Network (Multi-Layer Perceptron) using PyTorch.
+* **`model.py`**: Defines the architecture of the Multi-Layer Perceptron using PyTorch.
 * **`train.py`**: Executes the supervised learning loop to train the neural network to predict the optimal cost to the goal from any given board state.
 
 ### 4. Evaluation
-* **`eval_offline.py`**: Evaluates the standalone neural network on an independent test set to measure its pure prediction accuracy (e.g., MSE, MAE) against the true optimal costs.
-* **`eval_online.py`**: Benchmarks the complete hybrid system (A* guided by the trained neural network) against the baseline classical A* approach, measuring expanded nodes and execution time.
+* **`eval_offline.py`**: Evaluates the standalone neural network on an independent test set to measure its pure prediction accuracy against the true optimal costs.
+* **`eval_online.py`**: Evaluates the complete hybrid system (A* guided by the trained neural network) against the baseline classical A* approach, measuring expanded nodes and execution time.
