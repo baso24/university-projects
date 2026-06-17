@@ -20,4 +20,4 @@ This project implements a hybrid neuro-symbolic system designed to solve the 8-p
 * **`eval_offline.py`**: Evaluates the standalone neural network on an independent test set to measure its pure prediction accuracy against the true optimal costs.
 * **`eval_online.py`**: Evaluates the complete hybrid system (A* guided by the trained neural network) against the baseline classical A* approach, measuring expanded nodes and execution time.
 
-*Authors: Valentino Basili, Giovanni Paolo Maugeri, Akzat Muratbekov*
+*Authors: Valentino Basili, Giovanni Paolo Maugeri, Akzat Muratbekov.*
