@@ -10,7 +10,7 @@ This project implements a hybrid neuro-symbolic system designed to solve the 8-p
 
 ### 2. Data Pipeline
 * **`generate_data.py`**: Generates a massive dataset of random, solvable initial board configurations and calculates their true optimal cost using the classic A* algorithm.
-* **`dataset.py`**: Handles data loading and preprocessing for PyTorch, including the specific one-hot encoding representation of the board states.
+* **`dataset.py`**: Handles data loading and preprocessing for PyTorch, including the specific representation of the board states.
 
 ### 3. Neural Network
 * **`model.py`**: Defines the architecture of the Multi-Layer Perceptron using PyTorch.
