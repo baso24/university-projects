@@ -1,0 +1,10 @@
+{
+    "lr": 0.001,
+    "batch_size": 64,
+    "embedding_dim": 16,
+    "hidden_dims": [
+        64,
+        32
+    ],
+    "epochs": 1
+}
