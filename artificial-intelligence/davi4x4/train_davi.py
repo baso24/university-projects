@@ -22,10 +22,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from davi_model import PuzzleResNet
 from davi_utils import scramble_from_goal, encode_states, compute_bellman_targets, save_loss_plot
 
-ITERATIONS = 10000 
+ITERATIONS = 200000 
 BATCH_SIZE = 1000
-LEARNING_RATE = 0.0005  # Slightly reduced for deeper networks
-SYNC_EVERY = 100        # Increased to stabilize targets in the first phase
+LEARNING_RATE = 0.0002  # Slightly reduced for deeper networks
+SYNC_EVERY = 500        # Increased to stabilize targets in the first phase
 
 MODEL_FILE = "davi_model.pth"
 PLOT_FILE = "davi_loss_curve.png"
@@ -67,7 +67,7 @@ def train_davi():
         iterations_in_level += 1
 
         # Generate batch with implicit experience replay (from 1 to current_max_scramble)
-        states = [scramble_from_goal(random.randint(1, current_max_scramble)) for _ in range(BATCH_SIZE)]
+        states = [scramble_from_goal(random.randint(0, current_max_scramble)) for _ in range(BATCH_SIZE)]
         targets = compute_bellman_targets(states, target_net, device)
 
         model.train()
@@ -87,7 +87,7 @@ def train_davi():
     torch.save(model.state_dict(), os.path.join(here, MODEL_FILE))
     print(f"Saved model to {MODEL_FILE}")
 
-    if save_loss_plot(loss_history, os.path.join(here, PLOT_FILE), "DAVI 8-puzzle training loss"):
+    if save_loss_plot(loss_history, os.path.join(here, PLOT_FILE), "DAVI 15-puzzle training loss"):
         print(f"Saved loss curve to {PLOT_FILE}")
 
 

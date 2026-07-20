@@ -31,7 +31,6 @@ def summarize(name, nodes, times, lengths, optimal_lengths):
           f"{avg_len:>8.2f} | {pct_optimal:>7.1f}%")
     return avg_nodes
 
-
 def evaluate_online():
     if torch.backends.mps.is_available():
         device = torch.device("mps")
@@ -90,7 +89,6 @@ def evaluate_online():
 
     print(f"\nNode-expansion reduction vs classical A* + Manhattan: "
           f"{base_avg / max(learned_avg, 1e-9):.2f}x fewer nodes\n")
-
 
 if __name__ == "__main__":
     evaluate_online()
