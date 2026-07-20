@@ -48,15 +48,25 @@ def train_davi():
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     loss_history = []
 
-    current_max_scramble = 2 # Start the Curriculum Learning
+    current_max_scramble = 2
+    iterations_in_level = 0
     
     for iteration in range(1, ITERATIONS + 1):
-        # Step-up condition for the Curriculum
-        if iteration % 2000 == 0 and current_max_scramble < 80:
+        # The number of iterations at the current level scales with the difficulty.
+        # E.g.: max_scramble=2 -> 100 iterations
+        # E.g.: max_scramble=20 -> 1000 iterations
+        # We set a maximum (e.g., 2000 or 3000) to prevent the highest levels 
+        # from taking too long to step up.
+        required_iters = min(2000, current_max_scramble * 50)
+        
+        if iterations_in_level >= required_iters and current_max_scramble < 80:
             current_max_scramble += 1
-            print(f"Curriculum: MAX_SCRAMBLE increased to {current_max_scramble}")
+            iterations_in_level = 0
+            print(f"\n[Iter {iteration}] 🚀 Curriculum Step-Up: MAX_SCRAMBLE = {current_max_scramble}")
+        
+        iterations_in_level += 1
 
-        # Generate the boards using the implicit replay buffer
+        # Generate batch with implicit experience replay (from 1 to current_max_scramble)
         states = [scramble_from_goal(random.randint(1, current_max_scramble)) for _ in range(BATCH_SIZE)]
         targets = compute_bellman_targets(states, target_net, device)
 
