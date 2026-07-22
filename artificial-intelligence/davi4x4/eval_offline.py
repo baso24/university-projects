@@ -24,7 +24,6 @@ def test_inference():
         print("Errore: davi_model.pth non trovato.")
         return
 
-    # Usiamo direttamente il tuo ambiente per generare board a distanze crescenti note
     test_boards = [
         (0, GOAL_STATE_15),
         (1, scramble_from_goal(1)),
