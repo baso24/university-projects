@@ -67,7 +67,7 @@ def train_davi():
         iterations_in_level += 1
 
         # Generate batch with implicit experience replay (from 1 to current_max_scramble)
-        states = [scramble_from_goal(random.randint(1, current_max_scramble)) for _ in range(BATCH_SIZE)]
+        states = [scramble_from_goal(random.randint(0, current_max_scramble)) for _ in range(BATCH_SIZE)]
         targets = compute_bellman_targets(states, target_net, device)
 
         model.train()
@@ -87,7 +87,7 @@ def train_davi():
     torch.save(model.state_dict(), os.path.join(here, MODEL_FILE))
     print(f"Saved model to {MODEL_FILE}")
 
-    if save_loss_plot(loss_history, os.path.join(here, PLOT_FILE), "DAVI 8-puzzle training loss"):
+    if save_loss_plot(loss_history, os.path.join(here, PLOT_FILE), "DAVI 15-puzzle training loss"):
         print(f"Saved loss curve to {PLOT_FILE}")
 
 
