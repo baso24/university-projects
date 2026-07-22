@@ -11,17 +11,17 @@ from environment import (
 
 # 8-Puzzle Configuration
 
-GOAL_STATE = GOAL_STATE_8
-GRID_SIZE = GRID_SIZE_8
-TARGET_POS = TARGET_POS_8
-PUZZLE_NAME = "8-PUZZLE"
+# GOAL_STATE = GOAL_STATE_8
+# GRID_SIZE = GRID_SIZE_8
+# TARGET_POS = TARGET_POS_8
+# PUZZLE_NAME = "8-PUZZLE"
 
 # 15-Puzzle Configuration
 
-# GOAL_STATE = GOAL_STATE_15
-# GRID_SIZE = GRID_SIZE_15
-# TARGET_POS = TARGET_POS_15
-# PUZZLE_NAME = "15-PUZZLE"
+GOAL_STATE = GOAL_STATE_15
+GRID_SIZE = GRID_SIZE_15
+TARGET_POS = TARGET_POS_15
+PUZZLE_NAME = "15-PUZZLE"
 
 # returns the Manhattan distance heuristic for a given state
 def manhattan_distance(state):

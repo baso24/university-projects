@@ -32,8 +32,14 @@ def test_inference():
         (10, scramble_from_goal(10)),
         (15, scramble_from_goal(15)),
         (20, scramble_from_goal(20)),
+        (25, scramble_from_goal(25)),
         (30, scramble_from_goal(30)),
-        (50, scramble_from_goal(50))
+        (35, scramble_from_goal(35)),
+        (40, scramble_from_goal(40)),
+        (45, scramble_from_goal(45)),
+        (50, scramble_from_goal(50)),
+        (55, scramble_from_goal(55)),
+        (60, scramble_from_goal(60))
     ]
 
     print("-" * 55)

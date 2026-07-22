@@ -22,10 +22,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from davi_model import PuzzleResNet
 from davi_utils import scramble_from_goal, encode_states, compute_bellman_targets, save_loss_plot
 
-ITERATIONS = 10000
-BATCH_SIZE = 1000
+ITERATIONS = 50000
+BATCH_SIZE = 512
 LEARNING_RATE = 0.0005      # Slightly reduced for deeper networks
-SYNC_EVERY = 100            # Increased to stabilize targets in the first phase
+SYNC_EVERY = 300            # Increased to stabilize targets in the first phase
 MODEL_FILE = "davi_model.pth"
 PLOT_FILE = "davi_loss_curve.png"
 
