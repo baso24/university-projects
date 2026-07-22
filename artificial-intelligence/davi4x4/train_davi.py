@@ -22,11 +22,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from davi_model import PuzzleResNet
 from davi_utils import scramble_from_goal, encode_states, compute_bellman_targets, save_loss_plot
 
-ITERATIONS = 10000 
+ITERATIONS = 10000
 BATCH_SIZE = 1000
-LEARNING_RATE = 0.0005  # Slightly reduced for deeper networks
-SYNC_EVERY = 100        # Increased to stabilize targets in the first phase
-
+LEARNING_RATE = 0.0005      # Slightly reduced for deeper networks
+SYNC_EVERY = 100            # Increased to stabilize targets in the first phase
 MODEL_FILE = "davi_model.pth"
 PLOT_FILE = "davi_loss_curve.png"
 
@@ -57,9 +56,10 @@ def train_davi():
         # E.g.: max_scramble=20 -> 1000 iterations
         # We set a maximum (e.g., 2000 or 3000) to prevent the highest levels 
         # from taking too long to step up.
-        required_iters = min(2000, current_max_scramble * 50)
+        required_iters = min(800, current_max_scramble * 15)
         
-        if iterations_in_level >= required_iters and current_max_scramble < 80:
+        # Abbassiamo anche il tetto massimo da 80 a 60
+        if iterations_in_level >= required_iters and current_max_scramble < 60:
             current_max_scramble += 1
             iterations_in_level = 0
             print(f"\n[Iter {iteration}] 🚀 Curriculum Step-Up: MAX_SCRAMBLE = {current_max_scramble}")
