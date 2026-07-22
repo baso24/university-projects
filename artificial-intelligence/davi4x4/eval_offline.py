@@ -1,8 +1,8 @@
 import os
 import torch
 from davi_model import PuzzleResNet
-from davi_utils import encode_state, scramble_from_goal # Aggiunto scramble_from_goal
-from environment import GOAL_STATE_15 # Importiamo il TUO goal state
+from davi_utils import encode_state, scramble_from_goal  # Added scramble_from_goal
+from environment import GOAL_STATE_15  # Import YOUR goal state
 
 def test_inference():
     if torch.backends.mps.is_available():
@@ -12,7 +12,7 @@ def test_inference():
     else:
         device = torch.device("cpu")
         
-    print(f"Esecuzione inferenza su: {device}\n")
+    print(f"Running inference on: {device}\n")
 
     model = PuzzleResNet(hidden_dim=256, num_blocks=4).to(device)
     model_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "davi_model.pth")
@@ -21,7 +21,7 @@ def test_inference():
         model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
         model.eval()
     except FileNotFoundError:
-        print("Errore: davi_model.pth non trovato.")
+        print("Error: davi_model.pth not found.")
         return
 
     test_boards = [
@@ -43,7 +43,7 @@ def test_inference():
     ]
 
     print("-" * 55)
-    print(f"{'Mosse REALI dal Goal':<20} | {'Costo STIMATO dalla Rete':<30}")
+    print(f"{'REAL Moves from Goal':<20} | {'ESTIMATED Cost by Network':<30}")
     print("-" * 55)
 
     with torch.no_grad():
