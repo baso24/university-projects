@@ -36,7 +36,7 @@ def manhattan_distance(state):
 # implementation of a*
 # inputs: initial state and heuristic function
 # returns: path, number of nodes expanded, optimal cost
-def a_star(start_state, heuristic_fn, weight_factor=1):
+def a_star(start_state, heuristic_fn, weight_factor=1, max_nodes=None):
     # priority queue: (f_score = g_score + h_score, counter, state)
     # counter is used to break ties between states with the same f_score
     # g_score is the cost from the start state to the current state
@@ -58,6 +58,9 @@ def a_star(start_state, heuristic_fn, weight_factor=1):
     nodes_expanded = 0
     
     while open_list:
+        if max_nodes is not None and nodes_expanded >= max_nodes:
+            return None, nodes_expanded, -1
+            
         _, _, current = heapq.heappop(open_list)
         
         # check if we have reached the goal
