@@ -3,10 +3,10 @@ import sys
 import json
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from davi_model import PuzzleResNet
-from davi_utils import encode_states
+from davi_model import DAVI_Ultra
+from davi_utils import encode_states_fast
 
 def test_inference():
     if torch.backends.mps.is_available():
@@ -19,10 +19,12 @@ def test_inference():
     print(f"Running Offline Evaluation on: {device}\n")
 
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(current_directory, "davi_model.pth")
-    dataset_path = os.path.join(current_directory, "test_dataset_1000.json")
+    model_path = os.path.join(current_directory, "davi_model_5x5.pth")
+    if not os.path.exists(model_path):
+        model_path = os.path.join(current_directory, "davi_model.pth")
+    dataset_path = os.path.join(current_directory, "test_dataset_100.json")
 
-    model = PuzzleResNet(hidden_dim=256, num_blocks=4).to(device)
+    model = DAVI_Ultra().to(device)
     
     try:
         model.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
@@ -61,7 +63,7 @@ def test_inference():
             boards = problems_by_depth[depth]
             num_boards = len(boards)
             
-            x_batch = encode_states(boards).to(device)
+            x_batch = encode_states_fast(boards, device)
             preds = torch.clamp(model(x_batch).squeeze(1), min=0.0).cpu().numpy()
             
             opt_cost = float(depth)
