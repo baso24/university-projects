@@ -9,7 +9,7 @@
 
 <h3>Artificial Intelligence</h3>
 <p><b>Title:</b> Hybrid neurosymbolic system for solving the 15-puzzle</p>
-<p><b>Description: </b></p>
+<p><b>Description: </b>Implementation of an hybrid neuro-symbolic system designed to solve the 8-puzzle (and 15-puzzle) efficiently. It leverages a Feed-Forward Neural Network to learn an informed heuristic function that guides the A* search algorithm, aiming to outperform traditional hand-crafted heuristics like the Manhattan Distance. For 15 and 24 puzzle we designed a DAVI (Deep Approximate Value Iteration) Residual Network directly inspired by DeepCubeA.</p>
 <br>
 
 
